@@ -12,14 +12,14 @@ pub struct Config {
     path: Option<PathBuf>,
 }
 
-fn main() -> Result<(), Error> {
+fn main() {
     let args = Config::from_args();
     
-    if let Some(path) = args.path {
-        Lox::run_file(path)?;
+    let result = if let Some(path) = args.path {
+        Lox::run_file(path)
     } else {
-        Lox::run_prompt()?;
-    }
+        Lox::run_prompt()
+    };
 
-    Ok(())
+    result.map_err(|e| eprintln!("{}", e));
 }
