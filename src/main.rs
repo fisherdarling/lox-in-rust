@@ -1,4 +1,4 @@
-use lox::Lox;
+use lox::{Lox, error::Error};
 
 use std::path::PathBuf;
 use structopt::StructOpt;
@@ -12,12 +12,14 @@ pub struct Config {
     path: Option<PathBuf>,
 }
 
-fn main() {
+fn main() -> Result<(), Error> {
     let args = Config::from_args();
     
     if let Some(path) = args.path {
-        Lox::run_file(path)
+        Lox::run_file(path)?;
     } else {
-        Lox::run_prompt()
+        Lox::run_prompt()?;
     }
+
+    Ok(())
 }
