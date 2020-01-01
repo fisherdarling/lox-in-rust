@@ -1,0 +1,121 @@
+WHITESPACE = _{ " " | "\n" | "\t" }
+COMMENT = _{ 
+    "//" ~ (!"\n" ~ ANY)* ~ ("\n" | EOI) | 
+    "/*" ~ (!"*/" ~ ANY)* ~ "*/" 
+}
+
+program = { SOI ~ declaration* ~ EOI }
+
+// Declarations
+declaration = {
+    class_decl | fun_decl | var_decl | statement
+}
+
+class_decl = {
+    "class" ~ ident ~ ("<" ~ ident)? ~ "{" ~ function* ~ "}"
+}
+
+fun_decl = {
+    "fun" ~ function
+}
+
+var_decl = {
+    "var" ~ ident ~ ("=" ~ expr)? ~ ";"
+}
+
+// Statements
+statement = {
+    expr_stmt |
+    for_stmt |
+    if_stmt |
+    print_stmt |
+    return_stmt |
+    while_stmt |
+    block
+}
+
+expr_stmt = { expr ~ ";" }
+for_stmt = { 
+    "for" ~ "(" ~ (var_decl | expr_stmt | ";" )
+    ~ expr? ~ ";"
+    ~ expr? ~ ";" ~ ")"
+    ~ statement
+}
+while_stmt = {
+    "while" ~ "(" ~ expr ~ ")" ~ statement
+}
+if_stmt = {
+    "if" ~ "(" ~ expr ~ ")" ~ statement ~ ("else" ~ statement)? 
+}
+print_stmt = {
+    "print" ~ expr ~ ";"
+}
+return_stmt = {
+    "return" ~ expr? ~ ";"
+}
+block = { "{" ~ declaration* ~ "}" }
+
+// Operators:
+op_unary_minus =  { "-" }
+op_unary_not   =  { "!" }
+op_unary       = _{
+    op_unary_minus |
+    op_unary_not
+}
+
+op_plus          =  { "+" }
+op_minus         =  { "-" }
+op_times         =  { "*" }
+op_divide        =  { "/" }
+op_and           =  { "and" }
+op_or            =  { "or" }
+op_greater       =  { ">" }
+op_greater_equal =  { ">=" }
+op_lower         =  { "<" }
+op_lower_equal   =  { "<=" }
+op_equal         =  { "==" }
+op_infix         = _{
+    op_plus |
+    op_minus |
+    op_times |
+    op_divide |
+    op_and |
+    op_or |
+    op_greater |
+    op_greater_equal |
+    op_lower |
+    op_lower_equal |
+    op_equal
+}
+
+paren_open  = _{ "(" }
+paren_close = _{ ")" }
+
+value = {
+    float |
+    int |
+    string |
+    ident |
+    paren_open ~ expr ~ paren_close
+}
+
+dot   =  { "." }
+comma =  { "," }
+args  = _{ expr ~ (comma ~ expr)* }
+call  =  { ident ~ paren_open ~ args? ~ paren_close }
+
+term = { op_unary* ~ (call | value ~ (dot ~ call)*) }
+expr = { term ~ (op_infix ~ term)* }
+
+// Utility
+function = { ident ~ "(" ~ parameters? ~ ")" ~ block }
+parameters = { ident ~ ("," ~ ident )* }
+
+// Terminals 
+digit = _{ '0'..'9' }
+int   = @{ digit ~ (digit | "_")* }
+float = @{ int ~ "." ~ int? }
+string = @{ "\"" ~ (!"\"" ~ ANY)* ~ "\"" }
+ident = @{ ALPHA ~ (ALPHA | DIGIT)* }
+DIGIT = _{ ASCII_DIGIT }
+ALPHA = _{ 'a'..'z' | 'A'..'Z' | "_" }

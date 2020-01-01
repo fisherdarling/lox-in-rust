@@ -9,3 +9,6 @@ edition = "2018"
 [dependencies]
 structopt = "*"
 failure = "*"
+derive_more = "*"
+pest = "*"
+pest_derive = "*"

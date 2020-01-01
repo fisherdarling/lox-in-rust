@@ -1,20 +1,21 @@
-use lox::{Lox, error::Error};
+use lox::{error::Error, Lox};
 
 use std::path::PathBuf;
 use structopt::StructOpt;
+pub mod parser;
 
-/// A Rust interpreter for the Lox programming language. 
+/// A Rust interpreter for the Lox programming language.
 #[derive(Debug, Default, Clone, StructOpt)]
 #[structopt(name = "lox")]
 pub struct Config {
-    /// The path of the .lox file to execute 
+    /// The path of the .lox file to execute
     #[structopt(short = "f", long = "file")]
     path: Option<PathBuf>,
 }
 
 fn main() {
     let args = Config::from_args();
-    
+
     let result = if let Some(path) = args.path {
         Lox::run_file(path)
     } else {

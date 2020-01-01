@@ -1,12 +1,16 @@
-use std::io::{stdin, BufRead, stdout, Write};
-use std::path::Path;
 use std::borrow::Borrow;
 use std::fs;
+use std::io::{stdin, stdout, BufRead, Write};
+use std::path::Path;
 
-use crate::error::Error;
-
+pub(crate) mod ast;
 pub mod error;
+pub(crate) mod parser;
+pub(crate) mod token;
 
+use crate::ast::Ast;
+use crate::error::Error;
+use crate::parser::LoxParser;
 /// A Lox program.
 pub struct Lox;
 
@@ -17,11 +21,19 @@ impl Lox {
         Lox::run(contents)
     }
 
-    /// Run any utf-8 str of Lox code 
+    /// Run any utf-8 str of Lox code
     pub fn run<C: Borrow<str>>(input: C) -> Result<(), Error> {
         let code = input.borrow();
-        
-        unimplemented!()
+
+        let pairs = LoxParser::parse_str(code)
+            .map_err(|e| eprintln!("{:#?}", e))
+            .unwrap();
+        let ast = Ast::from_program(pairs);
+
+        // println!("{:#?}", ast.nodes());
+        ast.pretty_print(0.into(), 0);
+
+        Ok(())
     }
 
     /// Start the Lox REPL
