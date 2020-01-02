@@ -28,9 +28,9 @@ impl Lox {
         let pairs = LoxParser::parse_str(code)
             .map_err(|e| eprintln!("{:#?}", e))
             .unwrap();
+
         let ast = Ast::from_program(pairs);
 
-        // println!("{:#?}", ast.nodes());
         ast.pretty_print(0.into(), 0);
 
         Ok(())

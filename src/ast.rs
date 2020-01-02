@@ -1,9 +1,36 @@
-use derive_more::{AsMut, AsRef, Deref, DerefMut, From, Index, IndexMut, Into, Add, AddAssign};
+use derive_more::{Add, AddAssign, AsMut, AsRef, Deref, DerefMut, From, Index, IndexMut, Into};
 
 use crate::parser::Rule;
 use pest::iterators::{Pair, Pairs};
 use pest::prec_climber::{Operator, PrecClimber};
-use std::cell::RefCell;
+
+use std::fmt;
+
+#[derive(Clone, Deref, DerefMut, Index, IndexMut, PartialEq, PartialOrd)]
+pub struct Path {
+    pub items: Vec<String>,
+}
+
+impl fmt::Debug for Path {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", &self.items.join("."))
+    }
+}
+
+impl Path {
+    pub fn new() -> Self {
+        Self {
+            items: Vec::new(),
+        }
+    }
+
+    pub fn from_str(s: &str) -> Self {
+        let items = s.split('.').map(Into::into).collect();
+        Self {
+            items
+        }
+    }
+}
 
 #[derive(Debug, Clone, PartialEq, PartialOrd)]
 pub enum Op {
@@ -17,7 +44,8 @@ pub enum Op {
     Lt,
     Le,
     Ne,
-    Eq,
+    EqEq,
+    NotEq,
     Not,
     And,
     Or,
@@ -31,13 +59,33 @@ impl From<Rule> for Op {
             Rule::op_minus => Op::Minus,
             Rule::op_times => Op::Times,
             Rule::op_divide => Op::Divide,
-            // Rule::op_md => Op::Mod,
-            // Rule::op_plus => Op::Plus,
+            Rule::op_equal => Op::EqEq,
+            Rule::op_not_equal => Op::NotEq,
+            Rule::op_greater => Op::Gt,
+            Rule::op_greater_equal => Op::Ge,
+            Rule::op_lower => Op::Lt,
+            Rule::op_lower_equal => Op::Le,
             // Rule::op_plus => Op::Plus,
             _ => todo!(),
         }
     }
+}
 
+pub fn is_op(rule: Rule) -> bool {
+    match rule {
+        Rule::op_plus
+        | Rule::op_minus
+        | Rule::op_greater
+        | Rule::op_times
+        | Rule::op_greater_equal
+        | Rule::op_divide
+        | Rule::op_lower
+        | Rule::op_equal
+        | Rule::op_lower_equal
+        | Rule::op_not_equal => true,
+        // Rule::op_plus => Op::Plus,
+        _ => false,
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, PartialOrd)]
@@ -45,12 +93,13 @@ pub enum NodeType {
     Root,
     Assign,
     Path(String),
-    Binary(Op),
+    Op(Op),
     Unary(Op),
-    Call,
+    Call(Path),
+    NPath(Path),
     Ident(String),
     Literal,
-    Integer(isize),
+    Int(isize),
     Float(f64),
     Variable,
     Declaration,
@@ -114,7 +163,7 @@ impl Node {
     From,
     Into,
     Add,
-    AddAssign
+    AddAssign,
 )]
 pub struct NodeId(usize);
 
@@ -143,25 +192,14 @@ impl Ast {
     }
 
     pub fn push_tree(&mut self, other: Ast) -> NodeId {
-        // println!("\n=== Pushing ===");
-        // other.pretty_print(0.into(), 0);
-
         let before_length = self.nodes.len();
-
-        // println!("Before Length: {}", before_length);
 
         for node in other.nodes.into_iter() {
             let node_id = self.push(node);
-            // println!("New Id: {:?}", node_id);
             for child_id in self[*node_id].children_mut() {
                 *child_id = *child_id + before_length.into();
             }
         }
-
-        // println!("++++++++++++++++++++");
-        // self.pretty_print(before_length.into(), 0);
-
-        // println!("====================");
 
         before_length.into()
     }
@@ -185,8 +223,6 @@ impl Ast {
             }
         }
 
-        // println!("{:#?}", pairs);
-
         ast
     }
 
@@ -202,11 +238,26 @@ impl Ast {
                     println!("[stmt]");
                     self.create_stmt(node_id, pair);
                 }
-                _ => todo!(),
+                Rule::var_decl => {
+                    println!("[vdcl]");
+                    self.create_var_decl(node_id, pair);
+                }
+                Rule::class_decl => {
+                    println!("[cdcl]");
+                    // self.create_var_decl(node_id, pair);
+                }
+                _ => {
+                    println!("{:?}", pair.as_rule());
+                    todo!()
+                },
             }
         }
 
         self[*parent].push_child(node_id);
+    }
+
+    pub fn create_var_decl(&mut self, parent: NodeId, stmt: Pair<Rule>) {
+        assert_eq!(stmt.as_rule(), Rule::var_decl);
     }
 
     pub fn create_stmt(&mut self, parent: NodeId, stmt: Pair<Rule>) {
@@ -232,14 +283,9 @@ impl Ast {
     }
 
     pub fn create_expr(&mut self, parent: NodeId, expr: Pair<Rule>) {
-        // use Rule::*;
-
         println!("[expr] {:?}", parent);
 
         assert_eq!(expr.as_rule(), Rule::expr);
-
-        // let node = Node::new(Expression);
-        // let node_id = self.push(node);
 
         let climber = PrecClimber::new(create_operators());
 
@@ -247,18 +293,21 @@ impl Ast {
             println!("{:?}", op.as_rule());
 
             match op.as_rule() {
-                Rule::op_plus | Rule::op_times | Rule::op_minus | Rule::op_divide => {
-                    let mut new_ast = Ast::with_root_node(Node::new(Binary(Op::from(op.as_rule()))));
+                o if is_op(o) => {
+                    let mut new_ast = Ast::with_root_node(Node::new(Op(Op::from(o))));
+                    
                     let root_left = new_ast.push_tree(lhs);
                     new_ast[0].push_child(root_left);
+                    
                     let root_right = new_ast.push_tree(rhs);
                     new_ast[0].push_child(root_right);
+                    
                     new_ast
                 }
                 _ => {
                     // println!("{}")
                     todo!()
-                },
+                }
             }
         };
 
@@ -279,7 +328,12 @@ impl Ast {
     }
 
     pub fn pretty_print(&self, parent: NodeId, depth: usize) {
-        println!("[{:2}] {}{:?}", *self[*parent].id, " ".repeat(depth), self[*parent].ty);
+        println!(
+            "[{:2}] {}{:?}",
+            *self[*parent].id,
+            " ".repeat(depth),
+            self[*parent].ty
+        );
 
         for child in self[*parent].children() {
             self.pretty_print(*child, depth + 2);
@@ -292,9 +346,15 @@ pub fn create_operators() -> Vec<Operator<Rule>> {
     use pest::prec_climber::Assoc;
 
     vec![
+        Operator::new(Rule::op_or, Assoc::Left),
+        Operator::new(Rule::op_and, Assoc::Left),
+        Operator::new(Rule::op_equal, Assoc::Left) | Operator::new(Rule::op_not_equal, Assoc::Left),
+        Operator::new(Rule::op_greater, Assoc::Left)
+            | Operator::new(Rule::op_greater_equal, Assoc::Left)
+            | Operator::new(Rule::op_lower, Assoc::Left)
+            | Operator::new(Rule::op_lower_equal, Assoc::Left),
         Operator::new(Rule::op_plus, Assoc::Left) | Operator::new(Rule::op_minus, Assoc::Left),
         Operator::new(Rule::op_times, Assoc::Left) | Operator::new(Rule::op_divide, Assoc::Left),
-        // Operator::new(Rule::call)
     ]
 }
 
@@ -309,7 +369,7 @@ fn primary(pair: Pair<Rule>) -> Ast {
         }
         Rule::int => {
             let value: isize = pair.as_str().parse().unwrap();
-            let node = Node::new(Integer(value.into()));
+            let node = Node::new(Int(value.into()));
             Ast::with_root_node(node)
         }
         Rule::ident => {
@@ -322,20 +382,34 @@ fn primary(pair: Pair<Rule>) -> Ast {
             let node = Node::new(Ident(value.into()));
             Ast::with_root_node(node)
         }
-        Rule::value | Rule::term => {
-            primary(pair.into_inner().next().unwrap())
+        Rule::path => {
+            let value = Path::from_str(pair.as_str());
+            let node = Node::new(NPath(value));
+            Ast::with_root_node(node)
         }
+        Rule::value | Rule::term => primary(pair.into_inner().next().unwrap()),
         Rule::expr => {
             let mut ast = Ast::with_root_node(Node::new(Expression));
             ast.create_expr(NodeId(0), pair);
             ast
         }
-        _ => todo!()
+        Rule::call => {
+            let mut pairs = pair.into_inner();
+
+            let mut ast = Ast::new();
+            let path = pairs.next().unwrap().as_str();
+            let node = Node::new(Call(Path::from_str(path)));
+            let node_id = ast.push(node);
+
+            for arg_expr in pairs {
+                ast.create_expr(node_id, arg_expr);
+            }
+
+            ast
+        }
+        _ => {
+            println!("{:?}", pair.as_rule());
+            todo!()
+        },
     }
 }
-
-// pub fn infix(ast: &mut Ast) -> impl FnMut(Node, Pair<Rule>, Node) -> Node {
-//     |lhs: Node, op: Pair<Rule>, rhs: Node| {
-//         Node::new(Ident("".into()))
-//     }
-// }

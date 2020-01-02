@@ -74,6 +74,7 @@ op_greater_equal =  { ">=" }
 op_lower         =  { "<" }
 op_lower_equal   =  { "<=" }
 op_equal         =  { "==" }
+op_not_equal         =  { "!=" }
 op_infix         = _{
     op_plus |
     op_minus |
@@ -81,10 +82,10 @@ op_infix         = _{
     op_divide |
     op_and |
     op_or |
-    op_greater |
     op_greater_equal |
-    op_lower |
+    op_greater |
     op_lower_equal |
+    op_lower |
     op_equal
 }
 
@@ -100,12 +101,16 @@ value = {
 }
 
 dot   =  { "." }
-comma =  { "," }
+comma =  _{ "," }
 args  = _{ expr ~ (comma ~ expr)* }
-call  =  { ident ~ paren_open ~ args? ~ paren_close }
+call  =  { path ~ paren_open ~ args? ~ paren_close }
 
-term = { op_unary* ~ (call | value ~ (dot ~ call)*) }
-expr = { term ~ (op_infix ~ term)* }
+term = { op_unary* ~ (call | path | value ~ (dot ~ call)* ) }
+path = { ident ~ (dot ~ ident)* }
+
+assignment = { (call ~ dot)? ~ path ~ "=" ~ expr }
+
+expr = { assignment | term ~ (op_infix ~ term)* }
 
 // Utility
 function = { ident ~ "(" ~ parameters? ~ ")" ~ block }
