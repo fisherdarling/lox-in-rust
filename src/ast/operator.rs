@@ -1,4 +1,4 @@
-use super::Lit;
+use super::Object;
 use crate::error::Error;
 use crate::parser::Rule;
 use derive_more::Display;
@@ -74,7 +74,7 @@ pub fn is_binop(rule: Rule) -> bool {
 }
 
 pub trait BinaryOp {
-    fn binop(&self, op: BinOp, rhs: &Self) -> Result<Lit, Error>
+    fn binop(&self, op: BinOp, rhs: &Self) -> Result<Object, Error>
     where
         Self: Sized + ToString,
     {
@@ -87,7 +87,7 @@ pub trait BinaryOp {
 }
 
 impl BinaryOp for isize {
-    fn binop(&self, op: BinOp, rhs: &Self) -> Result<Lit, Error> {
+    fn binop(&self, op: BinOp, rhs: &Self) -> Result<Object, Error> {
         Ok(match op {
             BinOp::Plus => (self + rhs).into(),
             BinOp::Minus => (self - rhs).into(),
@@ -110,7 +110,7 @@ impl BinaryOp for isize {
 }
 
 impl BinaryOp for f32 {
-    fn binop(&self, op: BinOp, rhs: &Self) -> Result<Lit, Error> {
+    fn binop(&self, op: BinOp, rhs: &Self) -> Result<Object, Error> {
         Ok(match op {
             BinOp::Plus => (self + rhs).into(),
             BinOp::Minus => (self - rhs).into(),
@@ -133,7 +133,7 @@ impl BinaryOp for f32 {
 }
 
 impl BinaryOp for bool {
-    fn binop(&self, op: BinOp, rhs: &Self) -> Result<Lit, Error> {
+    fn binop(&self, op: BinOp, rhs: &Self) -> Result<Object, Error> {
         Ok(match op {
             BinOp::Gt => (self > rhs).into(),
             BinOp::Ge => (self >= rhs).into(),

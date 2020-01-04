@@ -1,4 +1,4 @@
-use super::ast::{Decl, Expr, Lit, Program, Stmt};
+use super::ast::{Decl, Expr, Object, Program, Stmt};
 use super::{visit::VResult, visit::Visitable, visit::Visitor};
 
 pub struct Printer(pub usize);
@@ -11,8 +11,8 @@ impl Visitor<()> for Printer {
 
     fn visit_expr(&mut self, e: &mut Expr) -> VResult<()> {
         match e {
-            Expr::Lit(l) => {
-                l.visit(self)?;
+            Expr::Object(o) => {
+                o.visit(self)?;
             }
             Expr::Call(p, a) => {
                 println!("[call]: {:?}(", p);
@@ -34,7 +34,7 @@ impl Visitor<()> for Printer {
         Ok(None)
     }
 
-    fn visit_lit(&mut self, e: &mut Lit) -> VResult<()> {
+    fn visit_lit(&mut self, e: &mut Object) -> VResult<()> {
         println!("{}[ltrl]: {}", " ".repeat(self.0), e);
         Ok(None)
     }

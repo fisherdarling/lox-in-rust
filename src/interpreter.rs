@@ -3,7 +3,7 @@ use std::convert::TryFrom;
 use crate::ast::visit::*;
 use crate::ast::{
     operator::{BinOp, BinaryOp},
-    Decl, Expr, Lit, Program, Stmt,
+    Decl, Expr, Object, Program, Stmt,
 };
 
 use crate::error::Error;
@@ -28,18 +28,18 @@ macro_rules! same_type {
 pub struct Interpreter;
 
 impl Interpreter {
-    pub fn eval_expr(&self, expr: &Expr) -> Result<Lit, Error> {
+    pub fn eval_expr(&self, expr: &Expr) -> Result<Object, Error> {
         match expr {
             Expr::Call(_p, _a) => panic!(),
-            Expr::Lit(l) => Ok(l.clone()),
+            Expr::Object(l) => Ok(l.clone()),
             Expr::BinOp(lhs, op, rhs) => {
                 let lhs = self.eval_expr(lhs.as_ref())?;
                 let rhs = self.eval_expr(rhs.as_ref())?;
 
                 match lhs {
-                    Lit::Int(_) => exec_op::<isize>(lhs, op.clone(), rhs),
-                    Lit::Float(_) => exec_op::<f32>(lhs, op.clone(), rhs),
-                    Lit::Bool(_) => exec_op::<bool>(lhs, op.clone(), rhs),
+                    Object::Int(_) => exec_op::<isize>(lhs, op.clone(), rhs),
+                    Object::Float(_) => exec_op::<f32>(lhs, op.clone(), rhs),
+                    Object::Bool(_) => exec_op::<bool>(lhs, op.clone(), rhs),
                     _ => Err(Error::InvalidOperator(
                         lhs.to_string(),
                         op.clone(),
@@ -53,19 +53,19 @@ impl Interpreter {
     }
 }
 
-impl Visitor<Lit> for Interpreter {
-    fn visit_expr(&mut self, e: &mut Expr) -> VResult<Lit> {
+impl Visitor<Object> for Interpreter {
+    fn visit_expr(&mut self, e: &mut Expr) -> VResult<Object> {
         let res = match e {
             Expr::Call(_p, _a) => panic!(),
-            Expr::Lit(l) => Ok(Some(l.clone())),
+            Expr::Object(l) => Ok(Some(l.clone())),
             Expr::BinOp(lhs, op, rhs) => {
                 let lhs = lhs.visit(self)?.ok_or(Error::ExpectedValue)?;
                 let rhs = rhs.visit(self)?.ok_or(Error::ExpectedValue)?;
 
                 match lhs {
-                    Lit::Int(_) => exec_op::<isize>(lhs, op.clone(), rhs),
-                    Lit::Float(_) => exec_op::<f32>(lhs, op.clone(), rhs),
-                    Lit::Bool(_) => exec_op::<bool>(lhs, op.clone(), rhs),
+                    Object::Int(_) => exec_op::<isize>(lhs, op.clone(), rhs),
+                    Object::Float(_) => exec_op::<f32>(lhs, op.clone(), rhs),
+                    Object::Bool(_) => exec_op::<bool>(lhs, op.clone(), rhs),
                     _ => Err(Error::InvalidOperator(
                         lhs.to_string(),
                         op.clone(),
@@ -79,7 +79,7 @@ impl Visitor<Lit> for Interpreter {
         res
     }
 
-    fn visit_stmt(&mut self, s: &mut Stmt) -> VResult<Lit> {
+    fn visit_stmt(&mut self, s: &mut Stmt) -> VResult<Object> {
         match s {
             Stmt::Print(e) => {
                 let v = e.visit(self)?.unwrap_or_default();
@@ -91,11 +91,11 @@ impl Visitor<Lit> for Interpreter {
     }
 }
 
-fn exec_op<T: BinaryOp + TryFrom<Lit, Error = Error> + ToString>(
-    lhs: Lit,
+fn exec_op<T: BinaryOp + TryFrom<Object, Error = Error> + ToString>(
+    lhs: Object,
     op: BinOp,
-    rhs: Lit,
-) -> Result<Lit, Error> {
+    rhs: Object,
+) -> Result<Object, Error> {
     let (lhs, rhs) = (T::try_from(lhs)?, T::try_from(rhs)?);
     lhs.binop(op, &rhs)
 }

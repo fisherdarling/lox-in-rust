@@ -17,16 +17,16 @@ pub trait Visitor<T> {
         res
     }
 
-    fn start_lit(&mut self, _l: &mut Lit) -> VResult<T> {
+    fn start_lit(&mut self, _l: &mut Object) -> VResult<T> {
         Ok(None)
     }
 
-    fn visit_lit(&mut self, _l: &mut Lit) -> VResult<T> {
+    fn visit_lit(&mut self, _l: &mut Object) -> VResult<T> {
         println!("Default Lit");
         Ok(None)
     }
 
-    fn finish_lit(&mut self, _l: &mut Lit, res: VResult<T>) -> VResult<T> {
+    fn finish_lit(&mut self, _l: &mut Object, res: VResult<T>) -> VResult<T> {
         res
     }
 
@@ -86,7 +86,7 @@ impl<V: Visitable> Visitable for Box<V> {
     }
 }
 
-impl Visitable for Lit {
+impl Visitable for Object {
     fn visit<T>(&mut self, v: &mut dyn Visitor<T>) -> VResult<T> {
         v.start_lit(self)?;
         let res = v.visit_lit(self);

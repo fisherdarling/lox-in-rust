@@ -44,7 +44,7 @@ impl Path {
 }
 
 #[derive(Debug, Clone, PartialEq, PartialOrd, Display)]
-pub enum Lit {
+pub enum Object {
     Int(isize),
     Float(f32),
     Str(String),
@@ -56,18 +56,18 @@ pub enum Lit {
     Unit,
 }
 
-impl Default for Lit {
+impl Default for Object {
     fn default() -> Self {
-        Lit::Unit
+        Object::Unit
     }
 }
 
-impl Lit {
+impl Object {
     pub fn from_pair(pair: Pair<Rule>) -> Self {
         match pair.as_rule() {
-            Rule::int => Lit::Int(pair.as_str().parse().unwrap()),
-            Rule::float => Lit::Float(pair.as_str().parse().unwrap()),
-            Rule::string => Lit::Str(pair.as_str().into()),
+            Rule::int => Object::Int(pair.as_str().parse().unwrap()),
+            Rule::float => Object::Float(pair.as_str().parse().unwrap()),
+            Rule::string => Object::Str(pair.as_str().into()),
             _ => todo!(),
         }
     }
@@ -75,7 +75,7 @@ impl Lit {
 
 #[derive(Debug, Clone, PartialEq, PartialOrd)]
 pub enum Expr {
-    Lit(Lit),
+ Object(Object),
     // #[display(fmt = "+")]
     BinOp(Box<Expr>, BinOp, Box<Expr>),
     // #[display(fmt = "")]
@@ -95,9 +95,9 @@ impl Expr {
 
     fn primary(pair: Pair<Rule>) -> Expr {
         match pair.as_rule() {
-            Rule::float | Rule::int | Rule::string => Lit::from_pair(pair).into(),
-            Rule::ident => Lit::Ident(pair.as_str().into()).into(),
-            Rule::path => Lit::from(Path::from_str(pair.as_str())).into(),
+            Rule::float | Rule::int | Rule::string => Object::from_pair(pair).into(),
+            Rule::ident => Object::Ident(pair.as_str().into()).into(),
+            Rule::path => Object::from(Path::from_str(pair.as_str())).into(),
             Rule::value | Rule::term => Expr::primary(pair.into_inner().next().unwrap()),
             Rule::expr => Expr::from_pair(pair),
             Rule::call => {
@@ -217,22 +217,22 @@ impl Program {
 }
 
 impl_from!(
-    isize > Lit::Int,
-    f32 > Lit::Float,
-    String > Lit::Str,
-    Path > Lit::Path,
-    bool > Lit::Bool,
-    Lit > Expr::Lit,
+    isize > Object::Int,
+    f32 > Object::Float,
+    String > Object::Str,
+    Path > Object::Path,
+    bool > Object::Bool,
+    Object > Expr::Object,
     Expr > Stmt::Expr,
     Stmt > Decl::Stmt,
 );
 
 impl_try_from!(
-    isize < Lit::Int,
-    f32 < Lit::Float,
-    String < Lit::Str,
-    Path < Lit::Path,
-    bool < Lit::Bool,
+    isize < Object::Int,
+    f32 < Object::Float,
+    String < Object::Str,
+    Path < Object::Path,
+    bool < Object::Bool,
 );
 
 pub fn create_operators() -> Vec<Operator<Rule>> {
