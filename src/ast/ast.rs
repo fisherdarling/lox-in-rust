@@ -227,7 +227,6 @@ impl_from!(
     Stmt > Decl::Stmt,
 );
 
-
 impl_try_from!(
     isize < Lit::Int,
     f32 < Lit::Float,

@@ -3,7 +3,7 @@ use std::fs;
 use std::io::{stdin, stdout, BufRead, Write};
 use std::path::Path;
 
-use failure::Fail;
+
 
 pub(crate) mod ast;
 // pub(crate) mod ast_rewrite;
@@ -12,7 +12,7 @@ pub(crate) mod interpreter;
 pub(crate) mod parser;
 pub(crate) mod token;
 
-use crate::ast::{printer::Printer, visit::Visitor, visit::*, Program};
+use crate::ast::{printer::Printer, visit::*, Program};
 use crate::error::Error;
 use crate::interpreter::Interpreter;
 use crate::parser::LoxParser;
@@ -63,7 +63,7 @@ impl Lox {
 
         while let Some(line) = lines.next().transpose()? {
             Lox::run(line)?;
-            
+
             print!("> ");
             stdout().flush()?;
         }

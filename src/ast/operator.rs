@@ -1,6 +1,6 @@
-use crate::parser::Rule;
-use crate::error::Error;
 use super::Lit;
+use crate::error::Error;
+use crate::parser::Rule;
 use derive_more::Display;
 
 #[derive(Debug, Clone, PartialEq, PartialOrd, Display)]
@@ -74,26 +74,37 @@ pub fn is_binop(rule: Rule) -> bool {
 }
 
 pub trait BinaryOp {
-    fn binop(&self, op: BinOp, rhs: &Self) -> Result<Lit, Error> where Self: Sized + ToString {
-        Err(Error::InvalidOperator(self.to_string(), op, rhs.to_string()))
+    fn binop(&self, op: BinOp, rhs: &Self) -> Result<Lit, Error>
+    where
+        Self: Sized + ToString,
+    {
+        Err(Error::InvalidOperator(
+            self.to_string(),
+            op,
+            rhs.to_string(),
+        ))
     }
 }
 
 impl BinaryOp for isize {
     fn binop(&self, op: BinOp, rhs: &Self) -> Result<Lit, Error> {
         Ok(match op {
-                BinOp::Plus => (self + rhs).into(), 
-                BinOp::Minus => (self - rhs).into(), 
-                BinOp::Times => (self * rhs).into(), 
-                BinOp::Divide => (self / rhs).into(), 
-                BinOp::Gt => (self > rhs).into(), 
-                BinOp::Ge => (self >= rhs).into(), 
-                BinOp::Lt => (self < rhs).into(), 
-                BinOp::Le => (self <= rhs).into(), 
-                BinOp::Ne => (self != rhs).into(), 
-                BinOp::EqEq => (self == rhs).into(), 
-                BinOp::NotEq => (self != rhs).into(),
-                _ => Err(Error::InvalidOperator(self.to_string(), op, rhs.to_string()))?, 
+            BinOp::Plus => (self + rhs).into(),
+            BinOp::Minus => (self - rhs).into(),
+            BinOp::Times => (self * rhs).into(),
+            BinOp::Divide => (self / rhs).into(),
+            BinOp::Gt => (self > rhs).into(),
+            BinOp::Ge => (self >= rhs).into(),
+            BinOp::Lt => (self < rhs).into(),
+            BinOp::Le => (self <= rhs).into(),
+            BinOp::Ne => (self != rhs).into(),
+            BinOp::EqEq => (self == rhs).into(),
+            BinOp::NotEq => (self != rhs).into(),
+            _ => Err(Error::InvalidOperator(
+                self.to_string(),
+                op,
+                rhs.to_string(),
+            ))?,
         })
     }
 }
@@ -101,18 +112,22 @@ impl BinaryOp for isize {
 impl BinaryOp for f32 {
     fn binop(&self, op: BinOp, rhs: &Self) -> Result<Lit, Error> {
         Ok(match op {
-                BinOp::Plus => (self + rhs).into(), 
-                BinOp::Minus => (self - rhs).into(), 
-                BinOp::Times => (self * rhs).into(), 
-                BinOp::Divide => (self / rhs).into(), 
-                BinOp::Gt => (self > rhs).into(), 
-                BinOp::Ge => (self >= rhs).into(), 
-                BinOp::Lt => (self < rhs).into(), 
-                BinOp::Le => (self <= rhs).into(), 
-                BinOp::Ne => (self != rhs).into(), 
-                BinOp::EqEq => (self == rhs).into(), 
-                BinOp::NotEq => (self != rhs).into(),
-                _ => Err(Error::InvalidOperator(self.to_string(), op, rhs.to_string()))?, 
+            BinOp::Plus => (self + rhs).into(),
+            BinOp::Minus => (self - rhs).into(),
+            BinOp::Times => (self * rhs).into(),
+            BinOp::Divide => (self / rhs).into(),
+            BinOp::Gt => (self > rhs).into(),
+            BinOp::Ge => (self >= rhs).into(),
+            BinOp::Lt => (self < rhs).into(),
+            BinOp::Le => (self <= rhs).into(),
+            BinOp::Ne => (self != rhs).into(),
+            BinOp::EqEq => (self == rhs).into(),
+            BinOp::NotEq => (self != rhs).into(),
+            _ => Err(Error::InvalidOperator(
+                self.to_string(),
+                op,
+                rhs.to_string(),
+            ))?,
         })
     }
 }
@@ -120,14 +135,18 @@ impl BinaryOp for f32 {
 impl BinaryOp for bool {
     fn binop(&self, op: BinOp, rhs: &Self) -> Result<Lit, Error> {
         Ok(match op {
-                BinOp::Gt => (self > rhs).into(), 
-                BinOp::Ge => (self >= rhs).into(), 
-                BinOp::Lt => (self < rhs).into(), 
-                BinOp::Le => (self <= rhs).into(), 
-                BinOp::Ne => (self != rhs).into(), 
-                BinOp::EqEq => (self == rhs).into(), 
-                BinOp::NotEq => (self != rhs).into(),
-                _ => Err(Error::InvalidOperator(self.to_string(), op, rhs.to_string()))?, 
+            BinOp::Gt => (self > rhs).into(),
+            BinOp::Ge => (self >= rhs).into(),
+            BinOp::Lt => (self < rhs).into(),
+            BinOp::Le => (self <= rhs).into(),
+            BinOp::Ne => (self != rhs).into(),
+            BinOp::EqEq => (self == rhs).into(),
+            BinOp::NotEq => (self != rhs).into(),
+            _ => Err(Error::InvalidOperator(
+                self.to_string(),
+                op,
+                rhs.to_string(),
+            ))?,
         })
     }
 }

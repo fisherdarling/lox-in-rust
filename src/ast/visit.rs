@@ -8,7 +8,7 @@ pub trait Visitor<T> {
     fn start_expr(&mut self, _e: &mut Expr) -> VResult<T> {
         Ok(None)
     }
-    
+
     fn visit_expr(&mut self, _e: &mut Expr) -> VResult<T> {
         Ok(None)
     }
@@ -65,7 +65,6 @@ pub trait Visitor<T> {
     fn finish_program(&mut self, _p: &mut Program, res: VResult<T>) -> VResult<T> {
         res
     }
-
 }
 
 pub trait Visitable {

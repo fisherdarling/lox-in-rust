@@ -1,4 +1,4 @@
-use crate::ast::{Lit, operator::BinOp};
+use crate::ast::{operator::BinOp};
 use failure::Fail;
 use std::io::Error as IOError;
 
@@ -12,7 +12,6 @@ pub enum Error {
     InvalidOperator(String, BinOp, String),
     #[fail(display = "Expected Value")]
     ExpectedValue,
-    
 }
 
 impl From<IOError> for Error {
