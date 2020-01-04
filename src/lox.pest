@@ -25,10 +25,10 @@ var_decl = {
 
 // Statements
 statement = {
+    print_stmt |
     expr_stmt |
     for_stmt |
     if_stmt |
-    print_stmt |
     return_stmt |
     while_stmt |
     block

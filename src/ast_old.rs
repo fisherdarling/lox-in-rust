@@ -19,16 +19,12 @@ impl fmt::Debug for Path {
 
 impl Path {
     pub fn new() -> Self {
-        Self {
-            items: Vec::new(),
-        }
+        Self { items: Vec::new() }
     }
 
     pub fn from_str(s: &str) -> Self {
         let items = s.split('.').map(Into::into).collect();
-        Self {
-            items
-        }
+        Self { items }
     }
 }
 
@@ -106,6 +102,7 @@ pub enum NodeType {
     Statement,
     Expression,
     Arguments,
+    Print,
 }
 
 use NodeType::*;
@@ -249,7 +246,7 @@ impl Ast {
                 _ => {
                     println!("{:?}", pair.as_rule());
                     todo!()
-                },
+                }
             }
         }
 
@@ -275,10 +272,24 @@ impl Ast {
 
                     self.create_expr(node_id, expr);
                 }
+                Rule::print_stmt => {
+                    println!("[prnt]");
+                    let expr = pair.into_inner().next().unwrap();
+
+                    self.create_print(node_id, expr);
+                }
                 _ => todo!(),
             }
         }
 
+        self[*parent].push_child(node_id);
+    }
+
+    pub fn create_print(&mut self, parent: NodeId, expr: Pair<Rule>) {
+        let node = Node::new(Print);
+        let node_id = self.push(node);
+
+        self.create_expr(node_id, expr);
         self[*parent].push_child(node_id);
     }
 
@@ -295,13 +306,13 @@ impl Ast {
             match op.as_rule() {
                 o if is_op(o) => {
                     let mut new_ast = Ast::with_root_node(Node::new(Op(Op::from(o))));
-                    
+
                     let root_left = new_ast.push_tree(lhs);
                     new_ast[0].push_child(root_left);
-                    
+
                     let root_right = new_ast.push_tree(rhs);
                     new_ast[0].push_child(root_right);
-                    
+
                     new_ast
                 }
                 _ => {
@@ -410,6 +421,6 @@ fn primary(pair: Pair<Rule>) -> Ast {
         _ => {
             println!("{:?}", pair.as_rule());
             todo!()
-        },
+        }
     }
 }
