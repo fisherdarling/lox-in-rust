@@ -1,9 +1,9 @@
+#![feature(slice_patterns)]
+
 use std::borrow::Borrow;
 use std::fs;
 use std::io::{stdin, stdout, BufRead, Write};
 use std::path::Path;
-
-
 
 pub(crate) mod ast;
 // pub(crate) mod ast_rewrite;
@@ -11,6 +11,9 @@ pub mod error;
 pub(crate) mod interpreter;
 pub(crate) mod parser;
 pub(crate) mod token;
+// pub(crate) mod visitor;
+pub(crate) mod env;
+// pub mod
 
 use crate::ast::{printer::Printer, visit::*, Program};
 use crate::error::Error;
@@ -35,15 +38,13 @@ impl Lox {
             .map_err(|e| eprintln!("{:#?}", e))
             .unwrap();
 
-        // let ast = Ast::from_program(pairs);
         let mut ast = Program::from_pairs(pairs);
-
-        // println!("{:#?}", ast);
         let mut printer = Printer(0);
-        let mut interpreter = Interpreter;
-        ast.visit(&mut printer)?;
+        let mut interpreter = Interpreter::default();
+        
+        printer.visit_program(&mut ast)?;
         println!("=== Execution ===");
-        match ast.visit(&mut interpreter) {
+        match interpreter.visit_program(&mut ast) {
             Ok(_) => (),
             Err(e) => println!("Error: {}", e),
         }

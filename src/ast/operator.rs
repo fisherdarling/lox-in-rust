@@ -4,6 +4,16 @@ use crate::parser::Rule;
 use derive_more::Display;
 
 #[derive(Debug, Clone, PartialEq, PartialOrd, Display)]
+pub enum UnOp {
+    #[display(fmt = "!")]
+    Not,
+    #[display(fmt = "~")]
+    Tilde,
+    #[display(fmt = "-")]
+    Minus,
+}
+
+#[derive(Debug, Clone, PartialEq, PartialOrd, Display)]
 pub enum BinOp {
     #[display(fmt = "+")]
     Plus,
@@ -73,12 +83,19 @@ pub fn is_binop(rule: Rule) -> bool {
     }
 }
 
+pub fn is_unop(rule: Rule) -> bool {
+    match rule {
+        Rule::op_minus | Rule::op_unary_not => true,
+        _ => false,
+    }
+}
+
 pub trait BinaryOp {
     fn binop(&self, op: BinOp, rhs: &Self) -> Result<Object, Error>
     where
         Self: Sized + ToString,
     {
-        Err(Error::InvalidOperator(
+        Err(Error::InvalidBinaryOperator(
             self.to_string(),
             op,
             rhs.to_string(),
@@ -100,7 +117,7 @@ impl BinaryOp for isize {
             BinOp::Ne => (self != rhs).into(),
             BinOp::EqEq => (self == rhs).into(),
             BinOp::NotEq => (self != rhs).into(),
-            _ => Err(Error::InvalidOperator(
+            _ => Err(Error::InvalidBinaryOperator(
                 self.to_string(),
                 op,
                 rhs.to_string(),
@@ -123,7 +140,7 @@ impl BinaryOp for f32 {
             BinOp::Ne => (self != rhs).into(),
             BinOp::EqEq => (self == rhs).into(),
             BinOp::NotEq => (self != rhs).into(),
-            _ => Err(Error::InvalidOperator(
+            _ => Err(Error::InvalidBinaryOperator(
                 self.to_string(),
                 op,
                 rhs.to_string(),
@@ -142,11 +159,47 @@ impl BinaryOp for bool {
             BinOp::Ne => (self != rhs).into(),
             BinOp::EqEq => (self == rhs).into(),
             BinOp::NotEq => (self != rhs).into(),
-            _ => Err(Error::InvalidOperator(
+            _ => Err(Error::InvalidBinaryOperator(
                 self.to_string(),
                 op,
                 rhs.to_string(),
             ))?,
+        })
+    }
+}
+
+pub trait UnaryOp {
+    fn unop(&self, op: UnOp) -> Result<Object, Error>
+    where
+        Self: Sized + ToString,
+    {
+        Err(Error::InvalidUnaryOperator(op, self.to_string()))
+    }
+}
+
+impl UnaryOp for isize {
+    fn unop(&self, op: UnOp) -> Result<Object, Error> {
+        Ok(match op {
+            UnOp::Not | UnOp::Tilde => (!self).into(),
+            UnOp::Minus => (-1 * self).into(),
+        })
+    }
+}
+
+impl UnaryOp for f32 {
+    fn unop(&self, op: UnOp) -> Result<Object, Error> {
+        Ok(match op {
+            UnOp::Minus => (-1.0 * self).into(),
+            _ => Err(Error::InvalidUnaryOperator(op, self.to_string()))?,
+        })
+    }
+}
+
+impl UnaryOp for bool {
+    fn unop(&self, op: UnOp) -> Result<Object, Error> {
+        Ok(match op {
+            UnOp::Not | UnOp::Tilde => (!self).into(),
+            _ => Err(Error::InvalidUnaryOperator(op, self.to_string()))?,
         })
     }
 }

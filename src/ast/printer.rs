@@ -1,91 +1,130 @@
-use super::ast::{Decl, Expr, Object, Program, Stmt};
-use super::{visit::VResult, visit::Visitable, visit::Visitor};
+use super::ast::{Decl, Expr, Object, Program, Stmt, Ident};
+use super::visit::Visitor;
+use crate::error::Error;
 
 pub struct Printer(pub usize);
 
-impl Visitor<()> for Printer {
-    fn start_expr(&mut self, _e: &mut Expr) -> VResult<()> {
-        self.0 += 2;
-        Ok(None)
-    }
+impl Visitor for Printer {
+    type Output = ();
+    // fn start_expr(&mut self, _e: &mut Expr) -> Result<Self::Output, Error> {
+    //     self.0 += 2;
+    //     Ok(None)
+    // }
 
-    fn visit_expr(&mut self, e: &mut Expr) -> VResult<()> {
+    fn visit_expr(&mut self, e: &mut Expr) -> Result<Self::Output, Error> {
+        self.0 += 2;
+
         match e {
-            Expr::Object(o) => {
-                o.visit(self)?;
+            Expr::Access(lhs, rhs) => {
+                println!("{}[accs]", " ".repeat(self.0));
+                self.visit_expr(lhs)?;
+                // println!("{}[.]", " ".repeat(self.0));
+                self.visit_expr(rhs)?;
             }
-            Expr::Call(p, a) => {
-                println!("[call]: {:?}(", p);
-                a.visit(self)?;
-                println!(")");
+            Expr::UnOp(op, rhs) => {
+                println!("{}[unop] {}", " ".repeat(self.0), op);
+                self.visit_expr(rhs)?;
             }
             Expr::BinOp(lhs, op, rhs) => {
-                println!("{}[bnop]: {}", " ".repeat(self.0), op);
-                lhs.visit(self)?;
-                rhs.visit(self)?;
+                println!("{}[bnop] {}", " ".repeat(self.0), op);
+                self.visit_expr(lhs)?;
+                self.visit_expr(rhs)?;
             }
-            _ => (),
-        };
-        Ok(None)
-    }
+            Expr::Call(ident, args) => {
+                print!("{}[call] {} (", " ".repeat(self.0), ident);
+                if args.is_empty() {
+                    println!(")");
+                } else {
+                    println!();
+                }
 
-    fn finish_expr(&mut self, _e: &mut Expr, _r: VResult<()>) -> VResult<()> {
+                for arg in args {
+                    self.visit_expr(arg)?;
+                }
+            }
+            Expr::Object(o) => {
+                self.visit_obj(o)?;
+            }
+        }
+
         self.0 -= 2;
-        Ok(None)
+        Ok(())
     }
 
-    fn visit_lit(&mut self, e: &mut Object) -> VResult<()> {
-        println!("{}[ltrl]: {}", " ".repeat(self.0), e);
-        Ok(None)
+    fn visit_obj(&mut self, e: &mut Object) -> Result<Self::Output, Error> {
+        println!("{}[objt]: {}", " ".repeat(self.0), e);
+        Ok(())
     }
 
-    fn start_stmt(&mut self, _s: &mut Stmt) -> VResult<()> {
+    // fn start_stmt(&mut self, _s: &mut Stmt) -> Result<Self::Output, Error> {
+    //     self.0 += 2;
+    //     Ok(None)
+    // }
+
+    fn visit_stmt(&mut self, e: &mut Stmt) -> Result<Self::Output, Error> {
         self.0 += 2;
-        Ok(None)
-    }
 
-    fn visit_stmt(&mut self, e: &mut Stmt) -> VResult<()> {
         print!("{}[stmt]: ", " ".repeat(self.0));
         match e {
-            Stmt::Expr(_) => {
+            Stmt::Expr(e) => {
                 println!("expr");
+                self.visit_expr(e)?;
             }
-            Stmt::Print(_) => {
+            Stmt::Print(e) => {
                 println!("print");
+                self.visit_expr(e)?;
             }
         }
 
-        Ok(None)
-    }
-
-    fn finish_stmt(&mut self, _s: &mut Stmt, _r: VResult<()>) -> VResult<()> {
         self.0 -= 2;
-        Ok(None)
+        Ok(())
     }
 
-    fn start_decl(&mut self, _d: &mut Decl) -> VResult<()> {
+    // fn start_decl(&mut self, _d: &mut Decl) -> Result<Self::Output, Error> {
+    //     self.0 += 2;
+    //     Ok(None)
+    // }
+
+    fn visit_var_decl(&mut self, ident: &mut Ident, init: &mut Option<Expr>) -> Result<Self::Output, Error> {
         self.0 += 2;
-        Ok(None)
+        println!("{}[iden]: {}", " ".repeat(self.0), ident);
+
+        if let Some(init) = init {
+            self.visit_expr(init)?;
+        }
+
+        self.0 -= 2;
+        
+        Ok(())
     }
 
-    fn visit_decl(&mut self, e: &mut Decl) -> VResult<()> {
+    fn visit_decl(&mut self, e: &mut Decl) -> Result<Self::Output, Error> {
+        self.0 += 2;
+
         print!("{}[decl]: ", " ".repeat(self.0));
         match e {
-            Decl::Stmt(_) => {
+            Decl::Stmt(s) => {
                 println!("stmt");
+                self.visit_stmt(s)?;
+            }
+            Decl::VarDecl(ident, init) => {
+                println!("var");
+                
+                self.visit_var_decl(ident, init)?;
             }
         }
 
-        Ok(None)
-    }
-
-    fn finish_decl(&mut self, _d: &mut Decl, _r: VResult<()>) -> VResult<()> {
         self.0 -= 2;
-        Ok(None)
+        Ok(())
     }
 
-    fn visit_program(&mut self, _e: &mut Program) -> VResult<()> {
+    fn visit_program(&mut self, p: &mut Program) -> Result<Self::Output, Error> {
         println!("[prgm]");
-        Ok(None)
+
+        for decl in p.decls.iter_mut() {
+            self.visit_decl(decl)?;
+        }
+
+        Ok(())
     }
 }

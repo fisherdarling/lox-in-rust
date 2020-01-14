@@ -86,29 +86,39 @@ op_infix         = _{
     op_greater |
     op_lower_equal |
     op_lower |
-    op_equal
+    op_equal |
+    op_dot
 }
 
 paren_open  = _{ "(" }
 paren_close = _{ ")" }
 
+// value = {
+//     float |
+//     int |
+//     string |
+//     ident |
+//     paren_open ~ expr ~ paren_close
+// }
+
+op_dot   =  { "." }
+comma =  _{ "," }
+args  = _{ expr ~ (comma ~ expr)* }
+call  =  { ident ~ paren_open ~ args? ~ paren_close }
+
 value = {
-    float |
+    float | // float comes before int since they overlap
     int |
     string |
     ident |
-    paren_open ~ expr ~ paren_close
+    paren_open ~ expr ~ paren_close |
+    call
 }
 
-dot   =  { "." }
-comma =  _{ "," }
-args  = _{ expr ~ (comma ~ expr)* }
-call  =  { path ~ paren_open ~ args? ~ paren_close }
+term = { op_unary* ~ (call | value) }
+// path = { ident ~ (op_dot ~ ident)* }
 
-term = { op_unary* ~ (call | path | value ~ (dot ~ call)* ) }
-path = { ident ~ (dot ~ ident)* }
-
-assignment = { (call ~ dot)? ~ path ~ "=" ~ expr }
+assignment = { (call ~ op_dot)? ~ ident ~ "=" ~ expr }
 
 expr = { assignment | term ~ (op_infix ~ term)* }
 

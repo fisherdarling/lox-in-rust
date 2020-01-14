@@ -1,4 +1,4 @@
-use lox::{Lox};
+use lox::Lox;
 
 use std::path::PathBuf;
 use structopt::StructOpt;

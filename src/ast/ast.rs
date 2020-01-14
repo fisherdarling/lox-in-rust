@@ -1,27 +1,15 @@
-use derive_more::{Add, Display, Mul, Sub};
+use derive_more::{Add, AsMut, AsRef, Deref, DerefMut, Display, From, Mul, Sub};
 
 use pest::iterators::{Pair, Pairs};
 use pest::prec_climber::{Assoc, Operator, PrecClimber};
 
-use super::operator::{is_binop, BinOp};
-use crate::impl_try_from;
+use super::operator::{is_binop, BinOp, UnOp};
 use crate::parser::Rule;
+use crate::{impl_from, impl_try_from};
 
 use std::fmt;
 
-macro_rules! impl_from {
-    ($($ty:ty > $name:ident :: $inner:ident),+$(,)?) => {
-        $(
-            impl From<$ty> for $name {
-                fn from(f: $ty) -> Self {
-                    Self::$inner(f)
-                }
-            }
-        )+
-    };
-}
-
-#[derive(Clone, PartialEq, PartialOrd)]
+#[derive(Clone, PartialEq, PartialOrd, Hash)]
 pub struct Path {
     pub items: Vec<String>,
 }
@@ -43,15 +31,19 @@ impl Path {
     }
 }
 
+#[derive(Hash, Default, Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Display, AsRef, AsMut, Deref, DerefMut)]
+pub struct Ident(pub String);
+
 #[derive(Debug, Clone, PartialEq, PartialOrd, Display)]
 pub enum Object {
     Int(isize),
     Float(f32),
+    // #[display(fmt = "{}", "_0")]
     Str(String),
-    Ident(String),
+    Ident(Ident),
     Bool(bool),
-    #[display(fmt = "{:?}", "_0")]
-    Path(Path),
+    // #[display(fmt = "{:?}", "_0")]
+    // Path(Path),
     #[display(fmt = "()")]
     Unit,
 }
@@ -75,11 +67,11 @@ impl Object {
 
 #[derive(Debug, Clone, PartialEq, PartialOrd)]
 pub enum Expr {
- Object(Object),
-    // #[display(fmt = "+")]
+    Object(Object),
+    UnOp(UnOp, Box<Expr>),
     BinOp(Box<Expr>, BinOp, Box<Expr>),
-    // #[display(fmt = "")]
-    Call(Path, Vec<Expr>),
+    Access(Box<Expr>, Box<Expr>),
+    Call(Ident, Vec<Expr>),
 }
 
 impl Expr {
@@ -93,24 +85,57 @@ impl Expr {
         climber.climb(pair.into_inner(), Expr::primary, Expr::infix)
     }
 
+    fn handle_term(pair: Pair<Rule>) -> Expr {
+        let pairs: Vec<Pair<Rule>> = pair.into_inner().collect();
+
+        match &pairs[..] {
+            [unary, rhs] => {
+                let op = match unary.as_rule() {
+                    Rule::op_unary_not => UnOp::Not,
+                    Rule::op_unary_minus => UnOp::Minus,
+                    _ => unreachable!(),
+                };
+
+                let rhs = Expr::primary(rhs.clone());
+                Expr::UnOp(op, Box::new(rhs))
+            }
+            [term] => Expr::primary(term.clone()),
+            _ => todo!(),
+        }
+    }
+
     fn primary(pair: Pair<Rule>) -> Expr {
         match pair.as_rule() {
             Rule::float | Rule::int | Rule::string => Object::from_pair(pair).into(),
-            Rule::ident => Object::Ident(pair.as_str().into()).into(),
-            Rule::path => Object::from(Path::from_str(pair.as_str())).into(),
-            Rule::value | Rule::term => Expr::primary(pair.into_inner().next().unwrap()),
+            Rule::ident => Object::Ident(Ident(pair.as_str().into())).into(),
+            // Rule::path => Object::from(Path::from_str(pair.as_str())).into(),
+            Rule::value => Expr::primary(pair.into_inner().next().unwrap()),
+            Rule::term => Expr::handle_term(pair),
             Rule::expr => Expr::from_pair(pair),
+            Rule::op_unary_not | Rule::op_unary_minus => {
+                // let rhs = Expr::primary()
+                println!("Not Pair: {:?}", pair);
+                todo!()
+            }
             Rule::call => {
                 let pairs: Vec<Pair<Rule>> = pair.into_inner().collect();
 
-                let path = Path::from_str(pairs.first().unwrap().as_str());
+                let ident = Ident(
+                    pairs
+                        .first()
+                        .into_iter()
+                        .next()
+                        .unwrap()
+                        .as_str()
+                        .to_string(),
+                );
                 let args: Vec<Expr> = pairs
                     .into_iter()
                     .skip(1)
                     .map(|p| Expr::from_pair(p))
                     .collect();
 
-                Expr::Call(path, args)
+                Expr::Call(ident, args)
             }
             _ => {
                 println!("{:?}", pair.as_rule());
@@ -122,7 +147,11 @@ impl Expr {
     fn infix(lhs: Expr, op: Pair<Rule>, rhs: Expr) -> Expr {
         match op.as_rule() {
             o if is_binop(o) => Expr::binop(lhs, BinOp::from(o), rhs),
-            _ => todo!(),
+            Rule::op_dot => Expr::Access(Box::new(lhs), Box::new(rhs)),
+            other => {
+                println!("{:?}", other);
+                todo!()
+            }
         }
     }
 }
@@ -161,6 +190,7 @@ impl Stmt {
 #[derive(Debug, Clone, PartialEq, PartialOrd)]
 pub enum Decl {
     Stmt(Stmt),
+    VarDecl(Ident, Option<Expr>),
 }
 
 impl Decl {
@@ -172,6 +202,13 @@ impl Decl {
                 // println!("[stmt]");
                 let stmt = Stmt::from_pair(pair);
                 Self::from(stmt)
+            }
+            Rule::var_decl => {
+                let pairs: Vec<Pair<Rule>> = pair.into_inner().collect();
+                let ident = Ident(pairs[0].as_str().to_string());
+                let initializer = pairs.last().map(|p| Expr::from_pair(p.clone()));
+
+                Decl::VarDecl(ident, initializer)
             }
             _ => {
                 println!("{:?}", pair.as_rule());
@@ -220,7 +257,8 @@ impl_from!(
     isize > Object::Int,
     f32 > Object::Float,
     String > Object::Str,
-    Path > Object::Path,
+    Ident > Object::Ident,
+    // Path > Object::Path,
     bool > Object::Bool,
     Object > Expr::Object,
     Expr > Stmt::Expr,
@@ -231,7 +269,7 @@ impl_try_from!(
     isize < Object::Int,
     f32 < Object::Float,
     String < Object::Str,
-    Path < Object::Path,
+    Ident < Object::Ident,
     bool < Object::Bool,
 );
 
@@ -246,5 +284,7 @@ pub fn create_operators() -> Vec<Operator<Rule>> {
             | Operator::new(Rule::op_lower_equal, Assoc::Left),
         Operator::new(Rule::op_plus, Assoc::Left) | Operator::new(Rule::op_minus, Assoc::Left),
         Operator::new(Rule::op_times, Assoc::Left) | Operator::new(Rule::op_divide, Assoc::Left),
+        Operator::new(Rule::op_dot, Assoc::Left),
+        // Operator::new(Rule::op_unary_not, Assoc::Left)
     ]
 }
