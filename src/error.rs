@@ -17,6 +17,8 @@ pub enum Error {
     ExpectedValue,
     #[fail(display = "Undefined variable: {}", 0)]
     UndefinedVariable(Ident),
+    #[fail(display = "Unsupported Operation: {}", 0)]
+    UnsupportedOperation(String),
 }
 
 impl From<IOError> for Error {

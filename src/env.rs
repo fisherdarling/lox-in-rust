@@ -28,6 +28,18 @@ impl Environment {
     }
 
     pub fn get(&self, ident: &Ident) -> Result<Object, Error> {
-        self.vars.get(ident).cloned().ok_or(Error::UndefinedVariable(ident.clone()))
+        self.vars
+            .get(ident)
+            .cloned()
+            .ok_or(Error::UndefinedVariable(ident.clone()))
+    }
+    pub fn set(&mut self, ident: &Ident, value: Object) -> Result<Object, Error> {
+        self.vars_mut()
+            .get_mut(ident)
+            .map(|v| {
+                *v = value.clone();
+                value
+            })
+            .ok_or(Error::UndefinedVariable(ident.clone()))
     }
 }

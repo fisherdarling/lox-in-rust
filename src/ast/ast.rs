@@ -31,7 +31,21 @@ impl Path {
     }
 }
 
-#[derive(Hash, Default, Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Display, AsRef, AsMut, Deref, DerefMut)]
+#[derive(
+    Hash,
+    Default,
+    Debug,
+    Clone,
+    PartialEq,
+    Eq,
+    PartialOrd,
+    Ord,
+    Display,
+    AsRef,
+    AsMut,
+    Deref,
+    DerefMut,
+)]
 pub struct Ident(pub String);
 
 #[derive(Debug, Clone, PartialEq, PartialOrd, Display)]
@@ -71,6 +85,7 @@ pub enum Expr {
     UnOp(UnOp, Box<Expr>),
     BinOp(Box<Expr>, BinOp, Box<Expr>),
     Access(Box<Expr>, Box<Expr>),
+    Assign(Box<Expr>, Box<Expr>),
     Call(Ident, Vec<Expr>),
 }
 
@@ -148,6 +163,7 @@ impl Expr {
         match op.as_rule() {
             o if is_binop(o) => Expr::binop(lhs, BinOp::from(o), rhs),
             Rule::op_dot => Expr::Access(Box::new(lhs), Box::new(rhs)),
+            Rule::op_assign => Expr::Assign(Box::new(lhs), Box::new(rhs)),
             other => {
                 println!("{:?}", other);
                 todo!()
@@ -275,6 +291,7 @@ impl_try_from!(
 
 pub fn create_operators() -> Vec<Operator<Rule>> {
     vec![
+        Operator::new(Rule::op_assign, Assoc::Left),
         Operator::new(Rule::op_or, Assoc::Left),
         Operator::new(Rule::op_and, Assoc::Left),
         Operator::new(Rule::op_equal, Assoc::Left) | Operator::new(Rule::op_not_equal, Assoc::Left),

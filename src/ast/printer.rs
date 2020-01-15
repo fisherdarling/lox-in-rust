@@ -1,4 +1,4 @@
-use super::ast::{Decl, Expr, Object, Program, Stmt, Ident};
+use super::ast::{Decl, Expr, Ident, Object, Program, Stmt};
 use super::visit::Visitor;
 use crate::error::Error;
 
@@ -15,6 +15,11 @@ impl Visitor for Printer {
         self.0 += 2;
 
         match e {
+            Expr::Assign(lhs, rhs) => {
+                println!("{}[asgn]", " ".repeat(self.0));
+                self.visit_expr(lhs)?;
+                self.visit_expr(rhs)?;
+            }
             Expr::Access(lhs, rhs) => {
                 println!("{}[accs]", " ".repeat(self.0));
                 self.visit_expr(lhs)?;
@@ -85,7 +90,11 @@ impl Visitor for Printer {
     //     Ok(None)
     // }
 
-    fn visit_var_decl(&mut self, ident: &mut Ident, init: &mut Option<Expr>) -> Result<Self::Output, Error> {
+    fn visit_var_decl(
+        &mut self,
+        ident: &mut Ident,
+        init: &mut Option<Expr>,
+    ) -> Result<Self::Output, Error> {
         self.0 += 2;
         println!("{}[iden]: {}", " ".repeat(self.0), ident);
 
@@ -94,7 +103,7 @@ impl Visitor for Printer {
         }
 
         self.0 -= 2;
-        
+
         Ok(())
     }
 
@@ -109,7 +118,7 @@ impl Visitor for Printer {
             }
             Decl::VarDecl(ident, init) => {
                 println!("var");
-                
+
                 self.visit_var_decl(ident, init)?;
             }
         }

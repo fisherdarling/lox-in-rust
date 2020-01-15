@@ -50,7 +50,11 @@ where
     //     Ok(None)
     // }
 
-    fn visit_var_decl(&mut self, ident: &mut Ident, init: &mut Option<Expr>) -> Result<Self::Output, Error> {
+    fn visit_var_decl(
+        &mut self,
+        ident: &mut Ident,
+        init: &mut Option<Expr>,
+    ) -> Result<Self::Output, Error> {
         Ok(Self::Output::default())
     }
 

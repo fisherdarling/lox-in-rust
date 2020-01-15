@@ -75,6 +75,7 @@ op_lower         =  { "<" }
 op_lower_equal   =  { "<=" }
 op_equal         =  { "==" }
 op_not_equal         =  { "!=" }
+op_assign = { "=" }
 op_infix         = _{
     op_plus |
     op_minus |
@@ -87,6 +88,7 @@ op_infix         = _{
     op_lower_equal |
     op_lower |
     op_equal |
+    op_assign |
     op_dot
 }
 
@@ -118,9 +120,9 @@ value = {
 term = { op_unary* ~ (call | value) }
 // path = { ident ~ (op_dot ~ ident)* }
 
-assignment = { (call ~ op_dot)? ~ ident ~ "=" ~ expr }
+// assignment = {  ~ "=" ~ expr }
 
-expr = { assignment | term ~ (op_infix ~ term)* }
+expr = { term ~ (op_infix ~ term)* }
 
 // Utility
 function = { ident ~ "(" ~ parameters? ~ ")" ~ block }

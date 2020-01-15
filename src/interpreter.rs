@@ -3,7 +3,7 @@ use std::convert::TryFrom;
 use crate::ast::visit::*;
 use crate::ast::{
     operator::{BinOp, BinaryOp, UnOp, UnaryOp},
-    Decl, Expr, Object, Program, Stmt, Ident,
+    Decl, Expr, Ident, Object, Program, Stmt,
 };
 use crate::env::Environment;
 
@@ -60,6 +60,17 @@ impl Visitor for Interpreter {
 
     fn visit_expr(&mut self, e: &mut Expr) -> Result<Self::Output, Error> {
         match e {
+            Expr::Assign(lhs, rhs) => {
+                let rhs = self.visit_expr(rhs)?;
+
+                if let box Expr::Object(Object::Ident(ident)) = lhs {
+                    self.env.set(&ident, rhs)
+                } else {
+                    Err(Error::UnsupportedOperation(
+                        "Currently only identifiers can be newly assigned.".to_string(),
+                    ))
+                }
+            }
             Expr::Access(_, _) => panic!(),
             Expr::Call(_p, _a) => panic!(),
             Expr::Object(l) => {
@@ -68,7 +79,7 @@ impl Visitor for Interpreter {
                 } else {
                     Ok(l.clone())
                 }
-            },
+            }
             Expr::UnOp(op, rhs) => {
                 let rhs = self.visit_expr(rhs)?;
                 match rhs {
@@ -96,7 +107,11 @@ impl Visitor for Interpreter {
         }
     }
 
-    fn visit_var_decl(&mut self, ident: &mut Ident, init: &mut Option<Expr>) -> Result<Self::Output, Error> {
+    fn visit_var_decl(
+        &mut self,
+        ident: &mut Ident,
+        init: &mut Option<Expr>,
+    ) -> Result<Self::Output, Error> {
         let value: Object = if let Some(init) = init {
             self.visit_expr(init)?
         } else {
