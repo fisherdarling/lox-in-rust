@@ -64,7 +64,7 @@ impl Visitor for Interpreter {
             Expr::Call(_p, _a) => panic!(),
             Expr::Object(l) => {
                 if let Object::Ident(ident) = l {
-                    self.env.vars().get(&ident).cloned().ok_or(Error::ExpectedValue)
+                    self.env.get(&ident)
                 } else {
                     Ok(l.clone())
                 }
@@ -103,7 +103,7 @@ impl Visitor for Interpreter {
             Object::Unit
         };
 
-        self.env.vars_mut().insert(ident.clone(), value);
+        self.env.define(ident.clone(), value);
         Ok(Object::Unit)
     }
 

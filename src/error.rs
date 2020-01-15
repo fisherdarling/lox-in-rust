@@ -1,4 +1,5 @@
 use crate::ast::operator::{BinOp, UnOp};
+use crate::ast::Ident;
 use failure::Fail;
 use std::io::Error as IOError;
 
@@ -14,6 +15,8 @@ pub enum Error {
     InvalidUnaryOperator(UnOp, String),
     #[fail(display = "Expected Value")]
     ExpectedValue,
+    #[fail(display = "Undefined variable: {}", 0)]
+    UndefinedVariable(Ident),
 }
 
 impl From<IOError> for Error {
