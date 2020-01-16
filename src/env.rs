@@ -7,39 +7,61 @@ use crate::error::Error;
 
 #[derive(Default, Debug, Clone, PartialEq, Deref, DerefMut)]
 pub struct Environment {
-    pub vars: HashMap<Ident, Object>,
+    // pub globals: HashMap<Ident, Object>,
+    pub vars: Vec<HashMap<Ident, Object>>,
 }
 
 impl Environment {
     pub fn new() -> Self {
-        Default::default()
+        Self {
+            vars: vec![HashMap::default()],
+        }
     }
 
-    pub fn vars(&self) -> &HashMap<Ident, Object> {
-        &self.vars
+    pub fn last(&self) -> &HashMap<Ident, Object> {
+        &self.vars.last().unwrap()
     }
 
-    pub fn vars_mut(&mut self) -> &mut HashMap<Ident, Object> {
-        &mut self.vars
+    pub fn last_mut(&mut self) -> &mut HashMap<Ident, Object> {
+        self.vars.last_mut().unwrap()
     }
 
     pub fn define(&mut self, ident: Ident, value: Object) {
-        self.insert(ident, value);
+        self.last_mut().insert(ident, value);
     }
 
     pub fn get(&self, ident: &Ident) -> Result<Object, Error> {
         self.vars
-            .get(ident)
-            .cloned()
+            .iter()
+            .rev()
+            .find(|e| e.contains_key(ident))
+            .map(|e| e[ident].clone())
             .ok_or(Error::UndefinedVariable(ident.clone()))
     }
+
     pub fn set(&mut self, ident: &Ident, value: Object) -> Result<Object, Error> {
-        self.vars_mut()
-            .get_mut(ident)
-            .map(|v| {
-                *v = value.clone();
-                value
-            })
-            .ok_or(Error::UndefinedVariable(ident.clone()))
+        // self.env.iter().rev()
+        //     .get_mut(ident)
+        //     .map(|v| {
+        //         *v = value.clone();
+        //         value
+        //     })
+        //     .ok_or(Error::UndefinedVariable(ident.clone()))
+        let v: &mut HashMap<Ident, Object> = self
+            .vars
+            .iter_mut()
+            .rev()
+            .find(|e| e.contains_key(ident))
+            .ok_or(Error::UndefinedVariable(ident.clone()))?;
+        *v.get_mut(ident).unwrap() = value.clone();
+        Ok(value)
+    }
+
+    pub fn push_scope(&mut self) {
+        self.vars.push(Default::default());
+    }
+
+    pub fn pop_scope(&mut self) {
+        self.vars.pop();
     }
 }

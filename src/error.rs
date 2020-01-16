@@ -15,10 +15,15 @@ pub enum Error {
     InvalidUnaryOperator(UnOp, String),
     #[fail(display = "Expected Value")]
     ExpectedValue,
-    #[fail(display = "Undefined variable: {}", 0)]
+    #[fail(display = "Undefined variable `{}`", 0)]
     UndefinedVariable(Ident),
-    #[fail(display = "Unsupported Operation: {}", 0)]
+    #[fail(display = "Unsupported Operation `{}`", 0)]
     UnsupportedOperation(String),
+    #[fail(display = "Unsupported Truthiness `{}`", 0)]
+    UnsupportedTruthiness(String),
+    #[fail(display = "Invalid number of arguments, expected `{}` arg(s), got `{}` arg(s)", 0, 1)]
+    ArgumentArity(usize, usize),
+    
 }
 
 impl From<IOError> for Error {

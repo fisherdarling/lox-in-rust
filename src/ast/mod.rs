@@ -3,6 +3,7 @@ pub(crate) mod operator;
 pub(crate) mod printer;
 pub(crate) mod span;
 pub(crate) mod visit;
+pub(crate) mod function;
 
 pub use self::ast::*;
 

@@ -60,6 +60,8 @@ impl From<Rule> for BinOp {
             Rule::op_greater_equal => BinOp::Ge,
             Rule::op_lower => BinOp::Lt,
             Rule::op_lower_equal => BinOp::Le,
+            Rule::op_and => BinOp::And,
+            Rule::op_or => BinOp::Or,
             // Rule::op_plus => Op::Plus,
             _ => todo!(),
         }
@@ -77,7 +79,9 @@ pub fn is_binop(rule: Rule) -> bool {
         | Rule::op_lower
         | Rule::op_equal
         | Rule::op_lower_equal
-        | Rule::op_not_equal => true,
+        | Rule::op_not_equal
+        | Rule::op_and
+        | Rule::op_or => true,
         // Rule::op_plus => Op::Plus,
         _ => false,
     }
@@ -159,6 +163,8 @@ impl BinaryOp for bool {
             BinOp::Ne => (self != rhs).into(),
             BinOp::EqEq => (self == rhs).into(),
             BinOp::NotEq => (self != rhs).into(),
+            BinOp::And => (*self && *rhs).into(),
+            BinOp::Or => (*self || *rhs).into(),
             _ => Err(Error::InvalidBinaryOperator(
                 self.to_string(),
                 op,

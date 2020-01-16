@@ -1,4 +1,5 @@
 use super::ast::*;
+use super::function::LoxFn;
 
 use crate::error::Error;
 
@@ -15,8 +16,24 @@ where
     //     Ok(None)
     // }
 
+    fn visit_func_call(&mut self, f: &mut Box<dyn LoxFn>, args: &mut [Object]) -> Result<Self::Output, Error> {
+        Ok(Self::Output::default())
+    }
+
+    fn visit_if(&mut self, check: &mut Expr, good: &mut Block, bad: &mut Block) -> Result<Self::Output, Error> {
+        walk_if(self, check, good, bad)
+    }
+
     fn visit_expr(&mut self, e: &mut Expr) -> Result<Self::Output, Error> {
         walk_expr(self, e)
+    }
+
+    fn visit_block(&mut self, block: &mut Block) -> Result<Self::Output, Error> {
+        walk_block(self, block)
+    }
+
+    fn visit_while(&mut self, pred: &mut Expr, block: &mut Block) -> Result<Self::Output, Error> {
+        walk_while(self, pred, block)
     }
 
     // fn finish_expr(&mut self, _e: &mut Expr, res: Result<Self::Output, Error>) -> Result<Self::Output, Error> {
@@ -79,11 +96,14 @@ where
     // }
 }
 
-fn walk_expr<V: Visitor>(visitor: &mut V, expr: &mut Expr) -> Result<V::Output, Error> {
+pub fn walk_expr<V: Visitor>(visitor: &mut V, expr: &mut Expr) -> Result<V::Output, Error> {
     visitor.visit_expr(expr)
 }
 
-fn walk_program<V: Visitor>(visitor: &mut V, program: &mut Program) -> Result<V::Output, Error> {
+pub fn walk_program<V: Visitor>(
+    visitor: &mut V,
+    program: &mut Program,
+) -> Result<V::Output, Error> {
     let mut res = program
         .decls
         .iter_mut()
@@ -93,17 +113,49 @@ fn walk_program<V: Visitor>(visitor: &mut V, program: &mut Program) -> Result<V:
     res.pop().unwrap()
 }
 
-fn walk_decl<V: Visitor>(visitor: &mut V, decl: &mut Decl) -> Result<V::Output, Error> {
+pub fn walk_decl<V: Visitor>(visitor: &mut V, decl: &mut Decl) -> Result<V::Output, Error> {
     match decl {
         Decl::Stmt(s) => visitor.visit_stmt(s),
-        Decl::VarDecl(ident, init) => visitor.visit_var_decl(ident, init),
     }
 }
 
-fn walk_stmt<V: Visitor>(visitor: &mut V, stmt: &mut Stmt) -> Result<V::Output, Error> {
+pub fn walk_stmt<V: Visitor>(visitor: &mut V, stmt: &mut Stmt) -> Result<V::Output, Error> {
     match stmt {
         Stmt::Expr(e) | Stmt::Print(e) => visitor.visit_expr(e),
+        Stmt::Block(decls) => visitor.visit_block(decls),
+        Stmt::VarDecl(ident, init) => visitor.visit_var_decl(ident, init),
+        Stmt::If(c, g, b) => {
+            visitor.visit_if(c, g, b)
+        }
+        Stmt::While(pred, block) => {
+            visitor.visit_while(pred, block)
+        }
     }
+}
+
+pub fn walk_block<V: Visitor>(visitor: &mut V, block: &mut Block) -> Result<V::Output, Error> {
+    match &mut block.0[..] {
+        [first] => walk_decl(visitor, first),
+        [first @ .., last] => {
+            for decl in first {
+                walk_decl(visitor, decl)?;
+            }
+
+            walk_decl(visitor, last)
+        }
+        [] => Ok(V::Output::default()),
+    }
+}
+
+pub fn walk_if<V: Visitor>(visitor: &mut V, check: &mut Expr, good: &mut Block, bad: &mut Block) -> Result<V::Output, Error> {
+    visitor.visit_block(good)?;
+    visitor.visit_block(bad)?;
+    visitor.visit_expr(check)
+}
+
+pub fn walk_while<V: Visitor>(visitor: &mut V, pred: &mut Expr, block: &mut Block) -> Result<V::Output, Error> {
+    visitor.visit_expr(pred)?;
+    visitor.visit_block(block)
 }
 
 // pub trait Visitable {

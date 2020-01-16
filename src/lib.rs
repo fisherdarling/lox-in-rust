@@ -1,4 +1,4 @@
-#![feature(box_patterns)]
+#![feature(box_patterns, slice_patterns)]
 
 use std::borrow::Borrow;
 use std::fs;
@@ -38,11 +38,11 @@ impl Lox {
             .map_err(|e| eprintln!("{:#?}", e))
             .unwrap();
 
-        // println!("{:#?}", pairs);
+        println!("{:#?}", pairs);
 
         let mut ast = Program::from_pairs(pairs);
         let mut printer = Printer(0);
-        let mut interpreter = Interpreter::default();
+        let mut interpreter = Interpreter::new();
 
         printer.visit_program(&mut ast)?;
         println!("=== Execution ===");

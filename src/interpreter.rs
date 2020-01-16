@@ -1,9 +1,10 @@
 use std::convert::TryFrom;
 
 use crate::ast::visit::*;
+use crate::ast::function::LoxFn;
 use crate::ast::{
     operator::{BinOp, BinaryOp, UnOp, UnaryOp},
-    Decl, Expr, Ident, Object, Program, Stmt,
+    Block, Decl, Expr, Ident, Object, Program, Stmt,
 };
 use crate::env::Environment;
 
@@ -30,35 +31,39 @@ pub struct Interpreter {
 }
 
 impl Interpreter {
-    // pub fn eval_expr(&self, expr: &Expr) -> Result<Object, Error> {
-    //     match expr {
-    //         Expr::Call(_p, _a) => panic!(),
-    //         Expr::Object(l) => Ok(l.clone()),
-    //         Expr::BinOp(lhs, op, rhs) => {
-    //             let lhs = self.eval_expr(lhs.as_ref())?;
-    //             let rhs = self.eval_expr(rhs.as_ref())?;
+    pub fn new() -> Self {
+        Self {
+            env: Environment::new(),
+        }
+    }
 
-    //             match lhs {
-    //                 Object::Int(_) => exec_binop::<isize>(lhs, op.clone(), rhs),
-    //                 Object::Float(_) => exec_binop::<f32>(lhs, op.clone(), rhs),
-    //                 Object::Bool(_) => exec_binop::<bool>(lhs, op.clone(), rhs),
-    //                 _ => Err(Error::InvalidBinaryOperator(
-    //                     lhs.to_string(),
-    //                     op.clone(),
-    //                     rhs.to_string(),
-    //                 )),
-    //             }
+    pub fn define_global(&mut self, name: Ident, value: Object) {
+        
+    }
 
-    //             // exec_op(lhs, op.clone(), rhs)
-    //         }
-    //     }
-    // }
+    pub fn push_scope(&mut self) {
+        self.env.push_scope();
+    }
+
+    pub fn pop_scope(&mut self) {
+        self.env.push_scope();
+    }
+
+    pub fn define(&mut self, name: Ident, value: Object) {
+        self.env.define(name, value);
+    }
 }
 
 impl Visitor for Interpreter {
     type Output = Object;
 
+    fn visit_func_call(&mut self, f: &mut Box<dyn LoxFn>, args: &mut [Object]) -> Result<Self::Output, Error> {
+       f.call(self, args)
+    } 
+
     fn visit_expr(&mut self, e: &mut Expr) -> Result<Self::Output, Error> {
+        // println!("[ENV] {:#?}", self.env);
+
         match e {
             Expr::Assign(lhs, rhs) => {
                 let rhs = self.visit_expr(rhs)?;
@@ -91,6 +96,22 @@ impl Visitor for Interpreter {
             }
             Expr::BinOp(lhs, op, rhs) => {
                 let lhs = self.visit_expr(lhs)?;
+
+                // Short circuiting logic
+                match op {
+                    BinOp::And => {
+                        if !lhs.is_truthy()? {
+                            return Ok(false.into())
+                        }
+                    }
+                    BinOp::Or => {
+                        if lhs.is_truthy()? {
+                            return Ok(true.into())
+                        }
+                    }
+                    _ => (),
+                };
+
                 let rhs = self.visit_expr(rhs)?;
 
                 match lhs {
@@ -107,11 +128,46 @@ impl Visitor for Interpreter {
         }
     }
 
+    fn visit_if(&mut self, check: &mut Expr, good: &mut Block, bad: &mut Block) -> Result<Self::Output, Error> {
+        if self.visit_expr(check)?.is_truthy()? {
+            self.visit_block(good)
+        } else {
+            self.visit_block(bad)
+        }
+    }
+
+    fn visit_block(&mut self, block: &mut Block) -> Result<Self::Output, Error> {
+        // println!("[BLOCK] {:?}", decls);
+
+        self.env.push_scope();
+
+        let mut last = Self::Output::default();
+        for decl in &mut block.0 {
+            last = self.visit_decl(decl)?;
+        }
+
+        self.env.pop_scope();
+
+        Ok(last)
+    }
+
+    fn visit_while(&mut self, pred: &mut Expr, block: &mut Block) -> Result<Self::Output, Error> {
+        let mut last = Self::Output::default();
+        
+        while self.visit_expr(pred)?.is_truthy()? {
+            last = self.visit_block(block)?;
+        }
+
+        Ok(last)
+    }
+
     fn visit_var_decl(
         &mut self,
         ident: &mut Ident,
         init: &mut Option<Expr>,
     ) -> Result<Self::Output, Error> {
+        // println!("[VAR DECL] {} {:?}", ident, init);
+
         let value: Object = if let Some(init) = init {
             self.visit_expr(init)?
         } else {
@@ -123,14 +179,24 @@ impl Visitor for Interpreter {
     }
 
     fn visit_stmt(&mut self, s: &mut Stmt) -> Result<Self::Output, Error> {
+        // println!("[STMT]: {:?}", s);
+
         match s {
             Stmt::Print(e) => {
                 let v = self.visit_expr(e)?;
                 println!("{}", v);
                 Ok(Object::Unit)
             }
+            Stmt::VarDecl(ident, init) => self.visit_var_decl(ident, init),
+            Stmt::Block(decls) => self.visit_block(decls),
             Stmt::Expr(e) => self.visit_expr(e),
-            _ => Ok(Object::Unit),
+            Stmt::If(c, g, b) => {
+                self.visit_if(c, g, b)
+            }
+            Stmt::While(pred, block) => {
+                self.visit_while(pred, block)
+            }
+            // _ => Ok(Object::Unit),
         }
     }
 }

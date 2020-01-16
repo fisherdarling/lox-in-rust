@@ -57,7 +57,7 @@ impl Visitor for Printer {
     }
 
     fn visit_obj(&mut self, e: &mut Object) -> Result<Self::Output, Error> {
-        println!("{}[objt]: {}", " ".repeat(self.0), e);
+        println!("{}[objt]: {:?}", " ".repeat(self.0), e);
         Ok(())
     }
 
@@ -78,6 +78,31 @@ impl Visitor for Printer {
             Stmt::Print(e) => {
                 println!("print");
                 self.visit_expr(e)?;
+            }
+            Stmt::VarDecl(ident, init) => {
+                println!("var");
+                println!("{}[idnt]: {}", " ".repeat(self.0 + 2), ident);
+
+                if let Some(init) = init {
+                    self.visit_expr(init)?;
+                }
+            }
+            Stmt::If(check, good, bad) => {
+                println!("if");
+                self.visit_expr(check)?;
+                self.visit_block(good)?;
+                self.visit_block(bad)?;
+            }
+            Stmt::While(pred, block) => {
+                println!("while");
+                self.visit_expr(pred)?;
+                self.visit_block(block)?;
+            }
+            Stmt::Block(s) => {
+                println!("block");
+                for decl in &mut s.0 {
+                    self.visit_decl(decl)?;
+                }
             }
         }
 
@@ -115,12 +140,11 @@ impl Visitor for Printer {
             Decl::Stmt(s) => {
                 println!("stmt");
                 self.visit_stmt(s)?;
-            }
-            Decl::VarDecl(ident, init) => {
-                println!("var");
+            } // Decl::VarDecl(ident, init) => {
+              //     println!("var");
 
-                self.visit_var_decl(ident, init)?;
-            }
+              //     self.visit_var_decl(ident, init)?;
+              // }
         }
 
         self.0 -= 2;

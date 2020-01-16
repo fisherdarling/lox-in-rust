@@ -3,12 +3,13 @@ COMMENT = _{
     "//" ~ (!"\n" ~ ANY)* ~ ("\n" | EOI) | 
     "/*" ~ (!"*/" ~ ANY)* ~ "*/" 
 }
+semi = { ";" }
 
 program = { SOI ~ declaration* ~ EOI }
 
 // Declarations
 declaration = {
-    class_decl | fun_decl | var_decl | statement
+    class_decl | fun_decl | statement
 }
 
 class_decl = {
@@ -25,6 +26,7 @@ var_decl = {
 
 // Statements
 statement = {
+    var_decl |
     print_stmt |
     expr_stmt |
     for_stmt |
@@ -36,16 +38,16 @@ statement = {
 
 expr_stmt = { expr ~ ";" }
 for_stmt = { 
-    "for" ~ "(" ~ (var_decl | expr_stmt | ";" )
-    ~ expr? ~ ";"
-    ~ expr? ~ ";" ~ ")"
-    ~ statement
+    "for" ~ "(" ~ (var_decl | expr ~ semi | semi )
+    ~ expr? ~ semi
+    ~ expr? ~ ")"
+    ~ block
 }
 while_stmt = {
-    "while" ~ "(" ~ expr ~ ")" ~ statement
+    "while" ~ expr ~ block
 }
 if_stmt = {
-    "if" ~ "(" ~ expr ~ ")" ~ statement ~ ("else" ~ statement)? 
+    "if" ~ expr ~ block ~ ("else" ~ block)? 
 }
 print_stmt = {
     "print" ~ expr ~ ";"
@@ -109,6 +111,8 @@ args  = _{ expr ~ (comma ~ expr)* }
 call  =  { ident ~ paren_open ~ args? ~ paren_close }
 
 value = {
+    rtrue |
+    rfalse |
     float | // float comes before int since they overlap
     int |
     string |
@@ -129,10 +133,13 @@ function = { ident ~ "(" ~ parameters? ~ ")" ~ block }
 parameters = { ident ~ ("," ~ ident )* }
 
 // Terminals 
+rtrue = @{ "true" }
+rfalse = @{ "false" }
 digit = _{ '0'..'9' }
 int   = @{ digit ~ (digit | "_")* }
 float = @{ int ~ "." ~ int? }
-string = @{ "\"" ~ (!"\"" ~ ANY)* ~ "\"" }
+quote = _{ "\"" }
+string = @{ quote ~ (!"\"" ~ ANY)* ~ quote }
 ident = @{ ALPHA ~ (ALPHA | DIGIT)* }
 DIGIT = _{ ASCII_DIGIT }
 ALPHA = _{ 'a'..'z' | 'A'..'Z' | "_" }
