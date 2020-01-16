@@ -116,18 +116,31 @@ impl Expr {
         let pairs: Vec<Pair<Rule>> = pair.into_inner().collect();
 
         match &pairs[..] {
-            [unary, rhs] => {
-                let op = match unary.as_rule() {
-                    Rule::op_unary_not => UnOp::Not,
-                    Rule::op_unary_minus => UnOp::Minus,
-                    _ => unreachable!(),
-                };
+            // [term] => Expr::primary(term.clone()),
+            // [unary, rhs] => {
+            //     let op = match unary.as_rule() {
+            //         Rule::op_unary_not => UnOp::Not,
+            //         Rule::op_unary_minus => UnOp::Minus,
+            //         _ => unreachable!(),
+            //     };
 
-                let rhs = Expr::primary(rhs.clone());
-                Expr::UnOp(op, Box::new(rhs))
+            //     let rhs = Expr::handle_term(rhs.clone());
+            //     Expr::UnOp(op, Box::new(rhs))
+            // }
+            [unary @ .., rhs] => {
+                unary.iter().fold(Expr::from_pair(rhs.clone()), |inner: Expr, op| {
+                    match op.as_rule() {
+                        Rule::op_unary_not => Expr::UnOp(UnOp::Not, Box::new(inner)),
+                        Rule::op_unary_minus => Expr::UnOp(UnOp::Minus, Box::new(inner)),
+                        _ => unreachable!(),
+                    }
+                })
             }
-            [term] => Expr::primary(term.clone()),
-            _ => todo!(),
+            [] => unreachable!(),
+            // a => {
+            //     println!("{:?}", a);
+            //     todo!()
+            // },
         }
     }
 
