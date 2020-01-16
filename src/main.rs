@@ -1,7 +1,7 @@
 use lox::Lox;
 use lox::Config;
 
-use std::path::PathBuf;
+
 use structopt::StructOpt;
 pub mod parser;
 

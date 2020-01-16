@@ -37,7 +37,7 @@ impl Interpreter {
         }
     }
 
-    pub fn define_global(&mut self, name: Ident, value: Object) {}
+    pub fn define_global(&mut self, _name: Ident, _value: Object) {}
 
     pub fn push_scope(&mut self) {
         self.env.push_scope();

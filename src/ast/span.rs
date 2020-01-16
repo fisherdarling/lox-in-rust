@@ -1,4 +1,4 @@
-use derive_more::{AsMut, AsRef, Deref, DerefMut};
+use derive_more::{Deref, DerefMut};
 
 #[derive(Debug)]
 pub struct OwnedSpan;

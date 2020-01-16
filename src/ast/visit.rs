@@ -18,8 +18,8 @@ where
 
     fn visit_func_call(
         &mut self,
-        f: &mut Box<dyn LoxFn>,
-        args: &mut [Object],
+        _f: &mut Box<dyn LoxFn>,
+        _args: &mut [Object],
     ) -> Result<Self::Output, Error> {
         Ok(Self::Output::default())
     }
@@ -78,8 +78,8 @@ where
 
     fn visit_var_decl(
         &mut self,
-        ident: &mut Ident,
-        init: &mut Option<Expr>,
+        _ident: &mut Ident,
+        _init: &mut Option<Expr>,
     ) -> Result<Self::Output, Error> {
         Ok(Self::Output::default())
     }

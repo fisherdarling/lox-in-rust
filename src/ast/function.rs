@@ -2,7 +2,7 @@ use crate::ast::visit::Visitor;
 use crate::ast::{Block, Ident, Object};
 use crate::error::Error;
 use crate::interpreter::Interpreter;
-use std::fmt;
+
 
 pub trait LoxFn {
     fn arity(&self) -> usize;
