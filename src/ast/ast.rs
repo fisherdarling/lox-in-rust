@@ -70,7 +70,7 @@ impl Default for Object {
 }
 
 impl Object {
-    pub fn from_pair(pair: Pair<Rule>) -> Self {
+    pub fn from_pair(pair: &Pair<Rule>) -> Self {
         match pair.as_rule() {
             Rule::int => Object::Int(pair.as_str().parse().unwrap()),
             Rule::float => Object::Float(pair.as_str().parse().unwrap()),
@@ -106,18 +106,18 @@ impl Expr {
         Self::BinOp(Box::new(lhs), op, Box::new(rhs))
     }
 
-    pub fn from_pair(pair: Pair<Rule>) -> Self {
+    pub fn from_pair(pair: &Pair<Rule>) -> Self {
         let climber = PrecClimber::new(create_operators());
 
-        climber.climb(pair.into_inner(), Expr::primary, Expr::infix)
+        climber.climb(pair.clone().into_inner(), Expr::primary, Expr::infix)
     }
 
-    fn handle_term(pair: Pair<Rule>) -> Expr {
-        let pairs: Vec<Pair<Rule>> = pair.into_inner().collect();
+    fn handle_term(pair: &Pair<Rule>) -> Expr {
+        let pairs: Vec<Pair<Rule>> = pair.clone().into_inner().collect();
 
         match &pairs[..] {
             [unary @ .., rhs] => {
-                unary.iter().fold(Expr::from_pair(rhs.clone()), |inner: Expr, op| {
+                unary.iter().fold(Expr::from_pair(rhs), |inner: Expr, op| {
                     match op.as_rule() {
                         Rule::op_unary_not => Expr::UnOp(UnOp::Not, Box::new(inner)),
                         Rule::op_unary_minus => Expr::UnOp(UnOp::Minus, Box::new(inner)),
@@ -131,13 +131,13 @@ impl Expr {
 
     fn primary(pair: Pair<Rule>) -> Expr {
         match pair.as_rule() {
-            Rule::float | Rule::int | Rule::string => Object::from_pair(pair).into(),
+            Rule::float | Rule::int | Rule::string => Object::from_pair(&pair).into(),
             Rule::ident => Object::Ident(Ident(pair.as_str().into())).into(),
             Rule::value => Expr::primary(pair.into_inner().next().unwrap()),
-            Rule::term => Expr::handle_term(pair),
+            Rule::term => Expr::handle_term(&pair),
             Rule::rtrue => Expr::Object(Object::from(true)),
             Rule::rfalse => Expr::Object(Object::from(false)),
-            Rule::expr => Expr::from_pair(pair),
+            Rule::expr => Expr::from_pair(&pair),
             Rule::op_unary_not | Rule::op_unary_minus => {
                 // let rhs = Expr::primary()
                 println!("Not Pair: {:?}", pair);
@@ -156,7 +156,7 @@ impl Expr {
                         .to_string(),
                 );
                 let args: Vec<Expr> = pairs
-                    .into_iter()
+                    .iter()
                     .skip(1)
                     .map(|p| Expr::from_pair(p))
                     .collect();
@@ -187,8 +187,8 @@ impl Expr {
 pub struct Block(pub Vec<Decl>);
 
 impl Block {
-    pub fn from_pair(pair: Pair<Rule>) -> Self {
-        let inner_decls: Vec<Decl> = pair.into_inner().map(Decl::from_pair).collect();
+    pub fn from_pair(pair: &Pair<Rule>) -> Self {
+        let inner_decls: Vec<Decl> = pair.clone().into_inner().map(|p| Decl::from_pair(&p)).collect();
         Self(inner_decls)
     }
 }
@@ -204,41 +204,41 @@ pub enum Stmt {
 }
 
 impl Stmt {
-    pub fn from_pair(pair: Pair<Rule>) -> Self {
+    pub fn from_pair(pair: &Pair<Rule>) -> Self {
         // println!("[stmt] {:?}", pair.as_rule());
 
-        let pair = pair.into_inner().next().unwrap();
+        let pair = pair.clone().into_inner().next().unwrap();
 
         match pair.as_rule() {
-            Rule::statement => Stmt::from_pair(pair.into_inner().next().unwrap()),
+            Rule::statement => Stmt::from_pair(pair.clone().into_inner().next().as_ref().unwrap()),
             Rule::expr_stmt => {
                 // println!("[expr]");
-                let inner_expr = pair.into_inner().next().unwrap();
-                let expr = Expr::from_pair(inner_expr);
+                let inner_expr = pair.clone().into_inner().next().unwrap();
+                let expr = Expr::from_pair(&inner_expr);
                 Stmt::Expr(expr)
             }
             Rule::print_stmt => {
                 // println!("[print]");
-                let inner_expr = pair.into_inner().next().unwrap();
-                let expr = Expr::from_pair(inner_expr);
+                let inner_expr = pair.clone().into_inner().next().unwrap();
+                let expr = Expr::from_pair(&inner_expr);
                 Stmt::Print(expr)
             }
             Rule::var_decl => {
-                let pairs: Vec<Pair<Rule>> = pair.into_inner().collect();
+                let pairs: Vec<Pair<Rule>> = pair.clone().into_inner().collect();
                 let ident = Ident(pairs[0].as_str().to_string());
-                let initializer = pairs.last().map(|p| Expr::from_pair(p.clone()));
+                let initializer = pairs.last().map(|p| Expr::from_pair(p));
 
                 Stmt::VarDecl(ident, initializer)
             }
             Rule::while_stmt => {
-                let pairs: Vec<Pair<Rule>> = pair.into_inner().collect();
-                let pred = Expr::from_pair(pairs[0].clone());
-                let block = Block::from_pair(pairs[1].clone());
+                let pairs: Vec<Pair<Rule>> = pair.clone().into_inner().collect();
+                let pred = Expr::from_pair(&pairs[0]);
+                let block = Block::from_pair(&pairs[1]);
 
                 Stmt::While(pred, block)
             }
             Rule::for_stmt => {
-                let pairs: Vec<Pair<Rule>> = pair.into_inner().collect();
+                let pairs: Vec<Pair<Rule>> = pair.clone().into_inner().collect();
                 let rules: Vec<Rule> = pairs.iter().map(|p| p.as_rule()).collect();
 
                 let var_decl;
@@ -249,16 +249,16 @@ impl Stmt {
                     [Rule::var_decl, Rule::expr, Rule::semi, Rule::expr, Rule::block] => {
                         let var_pairs: Vec<Pair<Rule>> = pairs[0].clone().into_inner().collect();
                         let ident = Ident(var_pairs[0].as_str().to_string());
-                        let initializer = var_pairs.last().map(|p| Expr::from_pair(p.clone()));
+                        let initializer = var_pairs.last().map(Expr::from_pair);
 
                         var_decl = Stmt::VarDecl(ident, initializer);
-                        pred = Expr::from_pair(pairs[1].clone());
-                        inc = Expr::from_pair(pairs[3].clone());
+                        pred = Expr::from_pair(&pairs[1]);
+                        inc = Expr::from_pair(&pairs[3]);
                     }
                     _ => todo!(),
                 }
 
-                let mut block = Block::from_pair(pairs.last().unwrap().clone());
+                let mut block = Block::from_pair(pairs.last().unwrap());
                 block.0.push(Decl::Stmt(Stmt::Expr(inc)));
 
                 let while_stmt = Stmt::While(pred, block);
@@ -274,14 +274,14 @@ impl Stmt {
 
                 match &pairs[..] {
                     [pred, good, bad] => {
-                        let pred = Expr::from_pair(pred.clone());
-                        let good = Block::from_pair(good.clone());
-                        let bad = Block::from_pair(bad.clone());
+                        let pred = Expr::from_pair(pred);
+                        let good = Block::from_pair(good);
+                        let bad = Block::from_pair(bad);
                         Stmt::If(pred, good, bad)
                     }
                     [pred, good] => {
-                        let pred = Expr::from_pair(pred.clone());
-                        let good = Block::from_pair(good.clone());
+                        let pred = Expr::from_pair(pred);
+                        let good = Block::from_pair(good);
                         let bad = Block::default();
 
                         Stmt::If(pred, good, bad)
@@ -291,7 +291,7 @@ impl Stmt {
             }
             Rule::block => {
                 // let inner_decls: Vec<Decl> = pair.into_inner().map(Decl::from_pair).collect();
-                Stmt::Block(Block::from_pair(pair))
+                Stmt::Block(Block::from_pair(&pair))
             }
             _ => {
                 println!("{:?}", pair.as_rule());
@@ -307,19 +307,12 @@ pub enum Decl {
 }
 
 impl Decl {
-    pub fn from_pair(pair: Pair<Rule>) -> Self {
-        // println!("[decl] {:?}", pair.as_rule());
-        // assert_eq!(pair.as_rule(), Rule::declaration);
-
-        let pair = pair.into_inner().next().unwrap();
+    pub fn from_pair(pair: &Pair<Rule>) -> Self {
+        let pair = pair.clone().into_inner().next().unwrap();
 
         match pair.as_rule() {
-            // Rule::declaration => {
-            //     Decl::Stmt(Stmt::from_pair(pair.into_inner().next().unwrap()))
-            // }
             Rule::statement => {
-                // println!("[stmt]");
-                let stmt = Stmt::from_pair(pair);
+                let stmt = Stmt::from_pair(&pair);
                 Self::from(stmt)
             }
             _ => {
@@ -348,7 +341,7 @@ impl Program {
             match pair.as_rule() {
                 Rule::declaration => {
                     // println!("[decl]");
-                    let decl = Decl::from_pair(pair);
+                    let decl = Decl::from_pair(&pair);
                     program.decls.push(decl)
                 }
                 Rule::EOI => (),
