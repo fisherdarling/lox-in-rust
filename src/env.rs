@@ -40,13 +40,6 @@ impl Environment {
     }
 
     pub fn set(&mut self, ident: &Ident, value: Object) -> Result<Object, Error> {
-        // self.env.iter().rev()
-        //     .get_mut(ident)
-        //     .map(|v| {
-        //         *v = value.clone();
-        //         value
-        //     })
-        //     .ok_or(Error::UndefinedVariable(ident.clone()))
         let v: &mut HashMap<Ident, Object> = self
             .vars
             .iter_mut()

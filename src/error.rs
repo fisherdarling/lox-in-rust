@@ -21,9 +21,11 @@ pub enum Error {
     UnsupportedOperation(String),
     #[fail(display = "Unsupported Truthiness `{}`", 0)]
     UnsupportedTruthiness(String),
-    #[fail(display = "Invalid number of arguments, expected `{}` arg(s), got `{}` arg(s)", 0, 1)]
+    #[fail(
+        display = "Invalid number of arguments, expected `{}` arg(s), got `{}` arg(s)",
+        0, 1
+    )]
     ArgumentArity(usize, usize),
-    
 }
 
 impl From<IOError> for Error {

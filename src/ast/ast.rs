@@ -4,9 +4,9 @@ use pest::iterators::{Pair, Pairs};
 use pest::prec_climber::{Assoc, Operator, PrecClimber};
 
 use super::operator::{is_binop, BinOp, UnOp};
+use crate::error::Error;
 use crate::parser::Rule;
 use crate::{impl_from, impl_try_from};
-use crate::error::Error;
 
 use std::fmt;
 
@@ -244,8 +244,8 @@ impl Stmt {
                 let rules: Vec<Rule> = pairs.iter().map(|p| p.as_rule()).collect();
 
                 let var_decl;
-                let pred ;
-                let inc ;
+                let pred;
+                let inc;
 
                 match &rules[..] {
                     [Rule::var_decl, Rule::expr, Rule::semi, Rule::expr, Rule::block] => {
@@ -257,7 +257,7 @@ impl Stmt {
                         pred = Expr::from_pair(pairs[1].clone());
                         inc = Expr::from_pair(pairs[3].clone());
                     }
-                    _ => todo!()
+                    _ => todo!(),
                 }
 
                 let mut block = Block::from_pair(pairs.last().unwrap().clone());
@@ -280,7 +280,7 @@ impl Stmt {
                         let good = Block::from_pair(good.clone());
                         let bad = Block::from_pair(bad.clone());
                         Stmt::If(pred, good, bad)
-                    },
+                    }
                     [pred, good] => {
                         let pred = Expr::from_pair(pred.clone());
                         let good = Block::from_pair(good.clone());

@@ -16,11 +16,20 @@ where
     //     Ok(None)
     // }
 
-    fn visit_func_call(&mut self, f: &mut Box<dyn LoxFn>, args: &mut [Object]) -> Result<Self::Output, Error> {
+    fn visit_func_call(
+        &mut self,
+        f: &mut Box<dyn LoxFn>,
+        args: &mut [Object],
+    ) -> Result<Self::Output, Error> {
         Ok(Self::Output::default())
     }
 
-    fn visit_if(&mut self, check: &mut Expr, good: &mut Block, bad: &mut Block) -> Result<Self::Output, Error> {
+    fn visit_if(
+        &mut self,
+        check: &mut Expr,
+        good: &mut Block,
+        bad: &mut Block,
+    ) -> Result<Self::Output, Error> {
         walk_if(self, check, good, bad)
     }
 
@@ -124,12 +133,8 @@ pub fn walk_stmt<V: Visitor>(visitor: &mut V, stmt: &mut Stmt) -> Result<V::Outp
         Stmt::Expr(e) | Stmt::Print(e) => visitor.visit_expr(e),
         Stmt::Block(decls) => visitor.visit_block(decls),
         Stmt::VarDecl(ident, init) => visitor.visit_var_decl(ident, init),
-        Stmt::If(c, g, b) => {
-            visitor.visit_if(c, g, b)
-        }
-        Stmt::While(pred, block) => {
-            visitor.visit_while(pred, block)
-        }
+        Stmt::If(c, g, b) => visitor.visit_if(c, g, b),
+        Stmt::While(pred, block) => visitor.visit_while(pred, block),
     }
 }
 
@@ -147,13 +152,22 @@ pub fn walk_block<V: Visitor>(visitor: &mut V, block: &mut Block) -> Result<V::O
     }
 }
 
-pub fn walk_if<V: Visitor>(visitor: &mut V, check: &mut Expr, good: &mut Block, bad: &mut Block) -> Result<V::Output, Error> {
+pub fn walk_if<V: Visitor>(
+    visitor: &mut V,
+    check: &mut Expr,
+    good: &mut Block,
+    bad: &mut Block,
+) -> Result<V::Output, Error> {
     visitor.visit_block(good)?;
     visitor.visit_block(bad)?;
     visitor.visit_expr(check)
 }
 
-pub fn walk_while<V: Visitor>(visitor: &mut V, pred: &mut Expr, block: &mut Block) -> Result<V::Output, Error> {
+pub fn walk_while<V: Visitor>(
+    visitor: &mut V,
+    pred: &mut Expr,
+    block: &mut Block,
+) -> Result<V::Output, Error> {
     visitor.visit_expr(pred)?;
     visitor.visit_block(block)
 }

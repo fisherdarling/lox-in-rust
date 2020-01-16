@@ -1,7 +1,7 @@
 use std::convert::TryFrom;
 
-use crate::ast::visit::*;
 use crate::ast::function::LoxFn;
+use crate::ast::visit::*;
 use crate::ast::{
     operator::{BinOp, BinaryOp, UnOp, UnaryOp},
     Block, Decl, Expr, Ident, Object, Program, Stmt,
@@ -37,9 +37,7 @@ impl Interpreter {
         }
     }
 
-    pub fn define_global(&mut self, name: Ident, value: Object) {
-        
-    }
+    pub fn define_global(&mut self, name: Ident, value: Object) {}
 
     pub fn push_scope(&mut self) {
         self.env.push_scope();
@@ -57,9 +55,13 @@ impl Interpreter {
 impl Visitor for Interpreter {
     type Output = Object;
 
-    fn visit_func_call(&mut self, f: &mut Box<dyn LoxFn>, args: &mut [Object]) -> Result<Self::Output, Error> {
-       f.call(self, args)
-    } 
+    fn visit_func_call(
+        &mut self,
+        f: &mut Box<dyn LoxFn>,
+        args: &mut [Object],
+    ) -> Result<Self::Output, Error> {
+        f.call(self, args)
+    }
 
     fn visit_expr(&mut self, e: &mut Expr) -> Result<Self::Output, Error> {
         // println!("[ENV] {:#?}", self.env);
@@ -101,12 +103,12 @@ impl Visitor for Interpreter {
                 match op {
                     BinOp::And => {
                         if !lhs.is_truthy()? {
-                            return Ok(false.into())
+                            return Ok(false.into());
                         }
                     }
                     BinOp::Or => {
                         if lhs.is_truthy()? {
-                            return Ok(true.into())
+                            return Ok(true.into());
                         }
                     }
                     _ => (),
@@ -128,7 +130,12 @@ impl Visitor for Interpreter {
         }
     }
 
-    fn visit_if(&mut self, check: &mut Expr, good: &mut Block, bad: &mut Block) -> Result<Self::Output, Error> {
+    fn visit_if(
+        &mut self,
+        check: &mut Expr,
+        good: &mut Block,
+        bad: &mut Block,
+    ) -> Result<Self::Output, Error> {
         if self.visit_expr(check)?.is_truthy()? {
             self.visit_block(good)
         } else {
@@ -153,7 +160,7 @@ impl Visitor for Interpreter {
 
     fn visit_while(&mut self, pred: &mut Expr, block: &mut Block) -> Result<Self::Output, Error> {
         let mut last = Self::Output::default();
-        
+
         while self.visit_expr(pred)?.is_truthy()? {
             last = self.visit_block(block)?;
         }
@@ -190,13 +197,8 @@ impl Visitor for Interpreter {
             Stmt::VarDecl(ident, init) => self.visit_var_decl(ident, init),
             Stmt::Block(decls) => self.visit_block(decls),
             Stmt::Expr(e) => self.visit_expr(e),
-            Stmt::If(c, g, b) => {
-                self.visit_if(c, g, b)
-            }
-            Stmt::While(pred, block) => {
-                self.visit_while(pred, block)
-            }
-            // _ => Ok(Object::Unit),
+            Stmt::If(c, g, b) => self.visit_if(c, g, b),
+            Stmt::While(pred, block) => self.visit_while(pred, block), // _ => Ok(Object::Unit),
         }
     }
 }
