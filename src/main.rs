@@ -1,26 +1,18 @@
 use lox::Lox;
+use lox::Config;
 
 use std::path::PathBuf;
 use structopt::StructOpt;
 pub mod parser;
 
-/// A Rust interpreter for the Lox programming language.
-#[derive(Debug, Default, Clone, StructOpt)]
-#[structopt(name = "lox")]
-pub struct Config {
-    /// The path of the .lox file to execute
-    #[structopt(short = "f", long = "file")]
-    path: Option<PathBuf>,
-}
-
 fn main() {
     let args = Config::from_args();
 
-    let result = if let Some(path) = args.path {
-        Lox::run_file(path)
+    let result = if let Some(ref path) = &args.path {
+        Lox::run_file(path, &args)
     } else {
-        Lox::run_prompt()
+        Lox::run_prompt(&args)
     };
 
-    result.map_err(|e| eprintln!("{}", e));
+    result.map_err(|e| eprintln!("{}", e)).unwrap();
 }
