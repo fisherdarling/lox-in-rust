@@ -10,6 +10,10 @@ use crate::{impl_from, impl_try_from};
 
 use std::fmt;
 
+lazy_static::lazy_static! {
+    static ref PREC_CLIMBER: PrecClimber<Rule> = PrecClimber::new(create_operators());
+}
+
 #[derive(Clone, PartialEq, PartialOrd, Hash)]
 pub struct Path {
     pub items: Vec<String>,
@@ -53,12 +57,9 @@ pub struct Ident(pub String);
 pub enum Object {
     Int(isize),
     Float(f32),
-    // #[display(fmt = "{}", "_0")]
     Str(String),
     Ident(Ident),
     Bool(bool),
-    // #[display(fmt = "{:?}", "_0")]
-    // Path(Path),
     #[display(fmt = "()")]
     Unit,
 }
@@ -107,9 +108,7 @@ impl Expr {
     }
 
     pub fn from_pair(pair: &Pair<Rule>) -> Self {
-        let climber = PrecClimber::new(create_operators());
-
-        climber.climb(pair.clone().into_inner(), Expr::primary, Expr::infix)
+        PREC_CLIMBER.climb(pair.clone().into_inner(), Expr::primary, Expr::infix)
     }
 
     fn handle_term(pair: &Pair<Rule>) -> Expr {
