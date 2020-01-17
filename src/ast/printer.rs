@@ -1,6 +1,11 @@
 use super::ast::{Decl, Expr, Ident, Object, Program, Stmt};
+use super::function::{LoxFn, BuiltinFn, UserFn};
 use super::visit::Visitor;
 use crate::error::Error;
+
+use std::borrow::BorrowMut;
+
+use downcast_rs::Downcast;
 
 pub struct Printer(pub usize);
 
@@ -13,6 +18,8 @@ impl Visitor for Printer {
 
     fn visit_expr(&mut self, e: &mut Expr) -> Result<Self::Output, Error> {
         self.0 += 2;
+
+        // println!("exprexpr");
 
         match e {
             Expr::Assign(lhs, rhs) => {
@@ -57,6 +64,8 @@ impl Visitor for Printer {
     }
 
     fn visit_obj(&mut self, e: &mut Object) -> Result<Self::Output, Error> {
+        // println!("objobj");
+
         println!("{}[objt]: {:?}", " ".repeat(self.0), e);
         Ok(())
     }
@@ -68,6 +77,9 @@ impl Visitor for Printer {
 
     fn visit_stmt(&mut self, e: &mut Stmt) -> Result<Self::Output, Error> {
         self.0 += 2;
+
+        // println!("{:?}", e);
+        // println!("stmtmtmt");
 
         print!("{}[stmt]: ", " ".repeat(self.0));
         match e {
@@ -104,6 +116,17 @@ impl Visitor for Printer {
                     self.visit_decl(decl)?;
                 }
             }
+            Stmt::Func(name, func) => {
+                // let func = func.clone();
+
+                if let Some(builtin) = func.clone().borrow().downcast_ref::<BuiltinFn>() {
+                    println!("<fn builtin {} ({})>", builtin.name(), builtin.arity());
+                } else if let Some(user) = (*func.borrow()).downcast_ref::<UserFn>() {
+                    let mut body = user.body.clone();
+                    println!("<fn {} ({})>", user.name(), user.arity());
+                    self.visit_block(&mut body)?;
+                } 
+            }
         }
 
         self.0 -= 2;
@@ -121,6 +144,9 @@ impl Visitor for Printer {
         init: &mut Option<Expr>,
     ) -> Result<Self::Output, Error> {
         self.0 += 2;
+
+        // println!("vardecl");
+
         println!("{}[iden]: {}", " ".repeat(self.0), ident);
 
         if let Some(init) = init {
@@ -134,6 +160,9 @@ impl Visitor for Printer {
 
     fn visit_decl(&mut self, e: &mut Decl) -> Result<Self::Output, Error> {
         self.0 += 2;
+    
+        // println!("decldecl");
+
 
         print!("{}[decl]: ", " ".repeat(self.0));
         match e {

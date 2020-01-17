@@ -3,12 +3,18 @@ use derive_more::{Add, AsMut, AsRef, Deref, DerefMut, Display, From, Mul, Sub};
 use pest::iterators::{Pair, Pairs};
 use pest::prec_climber::{Assoc, Operator, PrecClimber};
 
+
 use super::operator::{is_binop, BinOp, UnOp};
+use super::function::{LoxFn, BuiltinFn, UserFn};
 use crate::error::Error;
 use crate::parser::Rule;
 use crate::{impl_from, impl_try_from};
 
+use std::rc::Rc;
+use std::cell::RefCell;
 use std::fmt;
+
+pub type Func = Rc<RefCell<Box<dyn LoxFn>>>;
 
 lazy_static::lazy_static! {
     static ref PREC_CLIMBER: PrecClimber<Rule> = PrecClimber::new(create_operators());
@@ -53,15 +59,37 @@ impl Path {
 )]
 pub struct Ident(pub String);
 
-#[derive(Debug, Clone, PartialEq, PartialOrd, Display)]
+impl Ident {
+    pub fn from_pair(pair: &Pair<Rule>) -> Self {
+        Ident(pair.as_str().to_string())
+    }
+}
+
+#[derive(Clone, PartialEq, PartialOrd, Display)]
 pub enum Object {
     Int(isize),
     Float(f32),
     Str(String),
     Ident(Ident),
     Bool(bool),
+    #[display(fmt = "<func {}>", "_0.borrow().name()")]
+    Func(Func),
     #[display(fmt = "()")]
     Unit,
+}
+
+impl fmt::Debug for Object {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            Object::Func(func) => write!(f, "<func {}({})>", func.borrow().name(), func.borrow().arity()),
+            Object::Int(e) => write!(f, "{:?}", e),
+            Object::Float(e) => write!(f, "{:?}", e),
+            Object::Str(e) => write!(f, "{:?}", e),
+            Object::Ident(e) => write!(f, "{:?}", e),
+            Object::Bool(e) => write!(f, "{:?}", e),
+            Object::Unit => write!(f, "()"),
+        }
+    }
 }
 
 impl Default for Object {
@@ -75,6 +103,7 @@ impl Object {
         match pair.as_rule() {
             Rule::int => Object::Int(pair.as_str().parse().unwrap()),
             Rule::float => Object::Float(pair.as_str().parse().unwrap()),
+            Rule::ident => Object::Ident(Ident(pair.as_str().to_string())),
             Rule::string => Object::Str(pair.as_str()[1..pair.as_str().len() - 1].into()),
             _ => todo!(),
         }
@@ -114,6 +143,15 @@ impl Expr {
     fn handle_term(pair: &Pair<Rule>) -> Expr {
         let pairs: Vec<Pair<Rule>> = pair.clone().into_inner().collect();
 
+        if pairs[0].as_rule() == Rule::call {
+            let pairs: Vec<Pair<_>> = pairs[0].clone().into_inner().collect();
+            let ident = Ident::from_pair(&pairs[0]);
+            let args: Vec<Expr> = pairs.iter().skip(1).map(Expr::from_pair).collect();
+
+            return Expr::Call(ident, args);
+        }
+        // println!("pairs: {:?}", pairs);
+        
         match &pairs[..] {
             [unary @ .., rhs] => {
                 unary.iter().fold(Expr::from_pair(rhs), |inner: Expr, op| {
@@ -192,7 +230,7 @@ impl Block {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, PartialOrd)]
+#[derive(Clone, PartialEq, PartialOrd)]
 pub enum Stmt {
     Expr(Expr),
     Print(Expr),
@@ -200,6 +238,16 @@ pub enum Stmt {
     VarDecl(Ident, Option<Expr>),
     If(Expr, Block, Block),
     While(Expr, Block),
+    Func(Ident, Func)
+}
+
+impl fmt::Debug for Stmt {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            Stmt::Func(_, func) => write!(f, "<func {}({})>", func.borrow().name(), func.borrow().arity()),
+            o => o.fmt(f)
+        }
+    }
 }
 
 impl Stmt {
@@ -314,6 +362,18 @@ impl Decl {
                 let stmt = Stmt::from_pair(&pair);
                 Self::from(stmt)
             }
+            Rule::fun_decl => {
+                let pairs: Vec<Pair<Rule>> = pair.into_inner().next().unwrap().into_inner().collect();
+
+                // println!("{:#?}", pairs[0].as_str());
+
+                let func_name: Ident = Ident::from_pair(&pairs[0]);
+                let parameters: Vec<Ident> = pairs[1].clone().into_inner().map(|p| Ident::from_pair(&p)).collect(); 
+                let body = Block::from_pair(&pairs[2]);
+
+                let user_fn = UserFn::new(func_name.clone(), parameters, body);
+                Decl::Stmt(Stmt::Func(func_name, Rc::new(RefCell::new(Box::new(user_fn)))))
+            }
             _ => {
                 println!("{:?}, {:#?}", pair.as_rule(), pair);
                 todo!()
@@ -370,11 +430,12 @@ impl_from!(
 );
 
 impl_try_from!(
-    isize < Object::Int,
-    f32 < Object::Float,
-    String < Object::Str,
-    Ident < Object::Ident,
-    bool < Object::Bool,
+    isize as Object::Int,
+    f32 as Object::Float,
+    String as Object::Str,
+    Ident as Object::Ident,
+    bool as Object::Bool,
+    Func as Object::Func,
 );
 
 pub fn create_operators() -> Vec<Operator<Rule>> {

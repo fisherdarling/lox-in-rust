@@ -9,7 +9,7 @@ pub use self::ast::*;
 
 #[macro_export]
 macro_rules! impl_try_from {
-    ($($name:ident < $from:ident :: $var:ident),+$(,)?) => {
+    ($($name:ty as $from:ident :: $var:ident),+$(,)?) => {
        $(
             impl std::convert::TryFrom<$from> for $name {
                 type Error = $crate::error::Error;

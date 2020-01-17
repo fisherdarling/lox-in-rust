@@ -1,10 +1,12 @@
 use std::convert::TryFrom;
+use std::rc::Rc;
+use std::convert::TryInto;
 
 use crate::ast::function::LoxFn;
 use crate::ast::visit::*;
 use crate::ast::{
     operator::{BinOp, BinaryOp, UnOp, UnaryOp},
-    Block, Decl, Expr, Ident, Object, Program, Stmt,
+    Block, Decl, Expr, Ident, Object, Program, Stmt, Func,
 };
 use crate::env::Environment;
 
@@ -57,10 +59,19 @@ impl Visitor for Interpreter {
 
     fn visit_func_call(
         &mut self,
-        f: &mut Box<dyn LoxFn>,
+        f: Func,
         args: &mut [Object],
     ) -> Result<Self::Output, Error> {
-        f.call(self, args)
+        f.borrow().call(self, args)
+    }
+
+    fn visit_func(
+        &mut self,
+        name: &mut Ident,
+        func: Func,
+    ) -> Result<Self::Output, Error> {
+        self.env.define(name.clone(), Object::Func(func.clone()));
+        Ok(Object::Unit)
     }
 
     fn visit_expr(&mut self, e: &mut Expr) -> Result<Self::Output, Error> {
@@ -79,7 +90,12 @@ impl Visitor for Interpreter {
                 }
             }
             Expr::Access(_, _) => panic!(),
-            Expr::Call(_p, _a) => panic!(),
+            Expr::Call(p, a) => {
+                let mut func: Func = self.env.get(p)?.try_into()?;
+                let mut args: Vec<Object> = a.iter_mut().map(|e| self.visit_expr(e)).collect::<Result<Vec<Object>, Error>>()?; 
+
+                self.visit_func_call(func.clone(), args.as_mut_slice())
+            },
             Expr::Object(l) => {
                 if let Object::Ident(ident) = l {
                     self.env.get(&ident)
@@ -199,6 +215,7 @@ impl Visitor for Interpreter {
             Stmt::Expr(e) => self.visit_expr(e),
             Stmt::If(c, g, b) => self.visit_if(c, g, b),
             Stmt::While(pred, block) => self.visit_while(pred, block), // _ => Ok(Object::Unit),
+            Stmt::Func(name, func) => self.visit_func(name, func.clone()),
         }
     }
 }

@@ -1,4 +1,4 @@
-#![feature(box_patterns, slice_patterns)]
+#![feature(box_patterns, slice_patterns, specialization)]
 
 use std::borrow::Borrow;
 use std::fs;

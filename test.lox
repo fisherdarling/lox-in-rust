@@ -1,12 +1,31 @@
-var a = 0;
-var b = 1;
-
-while a < 10000 {
-  print a;
-  var temp = a;
-  a = b;
-  b = temp + b;
+fun fact(n) {
+  if n == 0 {
+    1;
+  } else {
+    n * fact(n - 1);
+  }
 }
+
+print fact(4);
+
+// var a = 0;
+// var b = 1;
+
+// while a < 10000 {
+//   print a;
+//   var temp = a;
+//   a = b;
+//   b = temp + b;
+// }
+
+
+
+// var payload = ```
+// void wrapper(void) {
+//   system("/bin/bash{1}");
+// }
+// ```
+
 // var i = 0;
 // while i < 10 {
 //     print i;

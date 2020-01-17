@@ -1,3 +1,5 @@
+use std::rc::Rc;
+
 use super::ast::*;
 use super::function::LoxFn;
 
@@ -18,10 +20,21 @@ where
 
     fn visit_func_call(
         &mut self,
-        _f: &mut Box<dyn LoxFn>,
+        _f: Func,
         _args: &mut [Object],
     ) -> Result<Self::Output, Error> {
+        // println!("vfc");
+
         Ok(Self::Output::default())
+    }
+
+    fn visit_func(
+        &mut self,
+        name: &mut Ident,
+        func: Func,
+    ) -> Result<Self::Output, Error> {
+        // println!("vf");
+        walk_func(self, name, func)
     }
 
     fn visit_if(
@@ -30,18 +43,22 @@ where
         good: &mut Block,
         bad: &mut Block,
     ) -> Result<Self::Output, Error> {
+        // println!("vi");
         walk_if(self, check, good, bad)
     }
 
     fn visit_expr(&mut self, e: &mut Expr) -> Result<Self::Output, Error> {
+        // println!("ve");
         walk_expr(self, e)
     }
 
     fn visit_block(&mut self, block: &mut Block) -> Result<Self::Output, Error> {
+        // println!("vb");
         walk_block(self, block)
     }
 
     fn visit_while(&mut self, pred: &mut Expr, block: &mut Block) -> Result<Self::Output, Error> {
+        // println!("vw");
         walk_while(self, pred, block)
     }
 
@@ -53,6 +70,7 @@ where
     // }
 
     fn visit_obj(&mut self, _l: &mut Object) -> Result<Self::Output, Error> {
+        // println!("vo");
         Ok(Self::Output::default())
     }
 
@@ -65,6 +83,7 @@ where
     // }
 
     fn visit_stmt(&mut self, s: &mut Stmt) -> Result<Self::Output, Error> {
+        // println!("vs");
         walk_stmt(self, s)
     }
 
@@ -81,10 +100,12 @@ where
         _ident: &mut Ident,
         _init: &mut Option<Expr>,
     ) -> Result<Self::Output, Error> {
+        // println!("vvd");
         Ok(Self::Output::default())
     }
 
     fn visit_decl(&mut self, d: &mut Decl) -> Result<Self::Output, Error> {
+        // println!("vd");
         walk_decl(self, d)
     }
 
@@ -97,6 +118,7 @@ where
     // }
 
     fn visit_program(&mut self, p: &mut Program) -> Result<Self::Output, Error> {
+        // println!("vp");
         walk_program(self, p)
     }
 
@@ -106,6 +128,7 @@ where
 }
 
 pub fn walk_expr<V: Visitor>(visitor: &mut V, expr: &mut Expr) -> Result<V::Output, Error> {
+    // println!("we");
     visitor.visit_expr(expr)
 }
 
@@ -129,12 +152,15 @@ pub fn walk_decl<V: Visitor>(visitor: &mut V, decl: &mut Decl) -> Result<V::Outp
 }
 
 pub fn walk_stmt<V: Visitor>(visitor: &mut V, stmt: &mut Stmt) -> Result<V::Output, Error> {
+    // println!()
+    
     match stmt {
         Stmt::Expr(e) | Stmt::Print(e) => visitor.visit_expr(e),
         Stmt::Block(decls) => visitor.visit_block(decls),
         Stmt::VarDecl(ident, init) => visitor.visit_var_decl(ident, init),
         Stmt::If(c, g, b) => visitor.visit_if(c, g, b),
         Stmt::While(pred, block) => visitor.visit_while(pred, block),
+        Stmt::Func(name, func) => visitor.visit_func(name, func.clone()),
     }
 }
 
@@ -172,6 +198,13 @@ pub fn walk_while<V: Visitor>(
     visitor.visit_block(block)
 }
 
+pub fn walk_func<V: Visitor>(
+    visitor: &mut V,
+    name: &mut Ident,
+    func: Func,
+) -> Result<V::Output, Error> {
+    Ok(V::Output::default())
+}
 // pub trait Visitable {
 //     fn visit<T>(&mut self, v: &mut dyn Visitor<T>) -> Result<Self::Output, Error>;
 // }
