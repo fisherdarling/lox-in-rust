@@ -1,9 +1,11 @@
 use crate::ast::visit::Visitor;
 use crate::ast::{Block, Ident, Object};
 use crate::error::Error;
-use crate::interpreter::Interpreter;
+use crate::interpreter::{Interpreter, Exec};
+use crate::env::Closure;
 use downcast_rs::{Downcast, impl_downcast};
 
+use std::cell::Cell;
 use std::fmt;
 use std::rc::Rc;
 
@@ -12,7 +14,8 @@ pub trait LoxFn: Downcast {
     // fn args(&self) -> &[Ident];
     fn name(&self) -> &str;
     // fn body(&self) -> Block;
-    fn call(&self, interpreter: &mut Interpreter, args: &[Object]) -> Result<Object, Error>;
+    // fn closure(&self) -> &Closure;
+    fn call(&self, interpreter: &mut Interpreter, args: &[Object]) -> Result<Exec, Error>;
 }
 impl_downcast!(LoxFn);
 
@@ -20,7 +23,8 @@ pub struct BuiltinFn {
     pub arity: usize,
     pub args: Vec<Ident>,
     pub name: Ident,
-    pub body: fn(&mut Interpreter, &[Object]) -> Result<Object, Error>,
+    pub closure: Closure,
+    pub body: fn(&mut Interpreter, &[Object]) -> Result<Exec, Error>,
 }
 
 impl BuiltinFn {
@@ -28,12 +32,14 @@ impl BuiltinFn {
         arity: usize,
         args: Vec<Ident>,
         name: Ident,
-        body: fn(&mut Interpreter, &[Object]) -> Result<Object, Error>,
+        closure: Closure,
+        body: fn(&mut Interpreter, &[Object]) -> Result<Exec, Error>,
     ) -> Self {
         Self {
             arity,
             args,
             name,
+            closure,
             body,
         }
     }
@@ -52,7 +58,11 @@ impl LoxFn for BuiltinFn {
         &self.name.0
     }
 
-    fn call(&self, interpreter: &mut Interpreter, args: &[Object]) -> Result<Object, Error> {
+    // fn closure(&self) -> &Closure {
+    //     &self.closure
+    // }
+
+    fn call(&self, interpreter: &mut Interpreter, args: &[Object]) -> Result<Exec, Error> {
         (self.body)(interpreter, args)
     }
 }
@@ -61,17 +71,23 @@ pub struct UserFn {
     pub arity: usize,
     pub args: Vec<Ident>,
     pub name: Ident,
+    pub closure: Cell<Closure>,
     pub body: Block,
 }
 
 impl UserFn {
-    pub fn new(name: Ident, args: Vec<Ident>, body: Block) -> Self {
+    pub fn new(name: Ident, args: Vec<Ident>, closure: Closure, body: Block) -> Self {
         Self {
             arity: args.len(),
             args,
             name,
+            closure: Cell::new(closure),
             body,
         }
+    }
+
+    pub fn set_closure(&self, closure: Closure) {
+        self.closure.set(closure);
     }
 }
 
@@ -84,12 +100,19 @@ impl LoxFn for UserFn {
         &self.name.0
     }
 
-    fn call(&self, interpreter: &mut Interpreter, args: &[Object]) -> Result<Object, Error> {
+    // fn closure(&self) -> &Closure {
+    //     // &self.closure.
+    // }
+
+    fn call(&self, interpreter: &mut Interpreter, args: &[Object]) -> Result<Exec, Error> {
+        // printn
+        
         if self.arity() != args.len() {
             return Err(Error::ArgumentArity(self.arity(), args.len()));
         }
 
-        interpreter.push_scope();
+        let closure = self.closure.take();
+        interpreter.push_closure(closure);
 
         for (i, arg_name) in self.args.iter().enumerate() {
             interpreter.define(arg_name.clone(), args[i].clone());
@@ -97,7 +120,8 @@ impl LoxFn for UserFn {
 
         let res = interpreter.visit_block(&mut self.body.clone());
 
-        interpreter.pop_scope();
+        let new_closure = interpreter.pop_scope();
+        self.closure.set(new_closure);
 
         res
     }

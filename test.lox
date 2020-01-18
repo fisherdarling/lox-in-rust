@@ -1,12 +1,22 @@
-fun fact(n) {
-  if n == 0 {
-    1;
-  } else {
-    n * fact(n - 1);
+fun makeCounter() {
+  var i = 0;
+  fun count() {
+    i = i + 1;
+    print i;
   }
+
+  return count;
 }
 
-print fact(4);
+var counter = makeCounter();
+counter(); // "1".
+counter(); // "2".
+
+// fun add(a, b) {
+//   return a + b;
+// }
+
+// print add(3, 4);
 
 // var a = 0;
 // var b = 1;

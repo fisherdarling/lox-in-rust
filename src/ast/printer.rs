@@ -83,6 +83,12 @@ impl Visitor for Printer {
 
         print!("{}[stmt]: ", " ".repeat(self.0));
         match e {
+            Stmt::Return(e) => {
+                println!("return");
+                if let Some(e) = e {
+                    self.visit_expr(e)?;
+                }
+            }
             Stmt::Expr(e) => {
                 println!("expr");
                 self.visit_expr(e)?;

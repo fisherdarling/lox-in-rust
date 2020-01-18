@@ -155,6 +155,13 @@ pub fn walk_stmt<V: Visitor>(visitor: &mut V, stmt: &mut Stmt) -> Result<V::Outp
     // println!()
     
     match stmt {
+        Stmt::Return(e) => {
+            if let Some(e) = e {
+                visitor.visit_expr(e)
+            } else {
+                Ok(V::Output::default())
+            }
+        }
         Stmt::Expr(e) | Stmt::Print(e) => visitor.visit_expr(e),
         Stmt::Block(decls) => visitor.visit_block(decls),
         Stmt::VarDecl(ident, init) => visitor.visit_var_decl(ident, init),

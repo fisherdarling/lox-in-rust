@@ -238,14 +238,20 @@ pub enum Stmt {
     VarDecl(Ident, Option<Expr>),
     If(Expr, Block, Block),
     While(Expr, Block),
-    Func(Ident, Func)
+    Func(Ident, Func),
+    Return(Option<Expr>),
 }
 
 impl fmt::Debug for Stmt {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             Stmt::Func(_, func) => write!(f, "<func {}({})>", func.borrow().name(), func.borrow().arity()),
-            o => o.fmt(f)
+            Stmt::Expr(e) | Stmt::Print(e) => write!(f, "{:?}", e),
+            Stmt::Block(b) => write!(f, "{:?}", b),
+            Stmt::VarDecl(i, e) => write!(f, "{:?} = {:?}", i, e),
+            Stmt::If(c, g, b) => write!(f, "[if] {:?} {{ {:?} }} else {{ {:?} }}", c, g, b),
+            Stmt::While(e, b) => write!(f, "[while] {:?} {{ {:?} }}", e, b),
+            Stmt::Return(e) => write!(f, "[return] {:?}", e),
         }
     }
 }
@@ -336,6 +342,10 @@ impl Stmt {
                     _ => unreachable!(),
                 }
             }
+            Rule::return_stmt => {
+                let expr = pair.into_inner().next().map(|e| Expr::from_pair(&e));
+                Stmt::Return(expr)
+            }
             Rule::block => {
                 // let inner_decls: Vec<Decl> = pair.into_inner().map(Decl::from_pair).collect();
                 Stmt::Block(Block::from_pair(&pair))
@@ -365,13 +375,20 @@ impl Decl {
             Rule::fun_decl => {
                 let pairs: Vec<Pair<Rule>> = pair.into_inner().next().unwrap().into_inner().collect();
 
-                // println!("{:#?}", pairs[0].as_str());
-
                 let func_name: Ident = Ident::from_pair(&pairs[0]);
-                let parameters: Vec<Ident> = pairs[1].clone().into_inner().map(|p| Ident::from_pair(&p)).collect(); 
-                let body = Block::from_pair(&pairs[2]);
+                let parameters: Vec<Ident> = if pairs.len() == 3 {
+                    pairs[1].clone().into_inner().map(|p| Ident::from_pair(&p)).collect()
+                } else {
+                    vec![]
+                };
 
-                let user_fn = UserFn::new(func_name.clone(), parameters, body);
+                let body = if pairs.len() == 3 { 
+                    Block::from_pair(&pairs[2])
+                } else {
+                    Block::from_pair(&pairs[1])    
+                };
+
+                let user_fn = UserFn::new(func_name.clone(), parameters, Default::default(), body);
                 Decl::Stmt(Stmt::Func(func_name, Rc::new(RefCell::new(Box::new(user_fn)))))
             }
             _ => {

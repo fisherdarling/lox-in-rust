@@ -5,6 +5,8 @@ use derive_more::{Deref, DerefMut};
 use crate::ast::{Ident, Object};
 use crate::error::Error;
 
+pub type Closure = HashMap<Ident, Object>;
+
 #[derive(Default, Debug, Clone, PartialEq, Deref, DerefMut)]
 pub struct Environment {
     // pub globals: HashMap<Ident, Object>,
@@ -54,7 +56,11 @@ impl Environment {
         self.vars.push(Default::default());
     }
 
-    pub fn pop_scope(&mut self) {
-        self.vars.pop();
+    pub fn push_closure(&mut self, closure: Closure) {
+        self.vars.push(closure);
+    }
+
+    pub fn pop_scope(&mut self) -> Closure {
+        self.vars.pop().unwrap()
     }
 }
